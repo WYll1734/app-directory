@@ -3,7 +3,7 @@
 import ServerSidebar from "@/components/server/ServerSidebar";
 
 export default function DashboardLayout({ children, params }) {
-  const guildId = params.guildid; // 🔥 EXACT MATCH
+  const guildId = params.guildId; // ✅ FIXED
 
   return (
     <div className="flex">
