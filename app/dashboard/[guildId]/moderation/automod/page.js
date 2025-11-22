@@ -91,12 +91,10 @@ const advancedRules = [
 ];
 
 export default function AutomodPage({ params }) {
-  // FIXED — must match folder name [guildid]
-  const guildId = params.guildid;
+  const guildId = params.guildId;
 
   return (
     <div className="flex flex-col gap-6 overflow-visible relative">
-      {/* Header */}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-slate-50">Moderator Panel</h1>
         <p className="text-sm text-slate-400">
@@ -104,10 +102,8 @@ export default function AutomodPage({ params }) {
         </p>
       </div>
 
-      {/* Tabs */}
       <ModerationTabs guildId={guildId} activeTab="automod" />
 
-      {/* Overview cards */}
       <section className="grid gap-4 md:grid-cols-3 overflow-visible relative">
         <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -134,7 +130,6 @@ export default function AutomodPage({ params }) {
         </div>
       </section>
 
-      {/* Core filters */}
       <section className="flex flex-col gap-3 overflow-visible relative">
         <div>
           <h2 className="text-sm font-semibold text-slate-100">Core filters</h2>
@@ -160,7 +155,6 @@ export default function AutomodPage({ params }) {
         </div>
       </section>
 
-      {/* Advanced rules */}
       <section className="flex flex-col gap-3 overflow-visible relative">
         <div>
           <h2 className="text-sm font-semibold text-slate-100">Advanced rules</h2>
