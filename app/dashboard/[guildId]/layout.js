@@ -3,7 +3,8 @@
 import ServerSidebar from "@/components/server/ServerSidebar";
 
 export default function DashboardLayout({ children, params }) {
-  const guildId = params.guildId; // ✅ FIXED
+  // MUST match the folder name [guildId]
+  const guildId = params.guildId;
 
   return (
     <div className="flex">
