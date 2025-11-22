@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-export async function GET(req) {
-  const guildId = req.nextUrl.searchParams.get("guildId");
+export async function GET(req, { params }) {
+  const guildId = params.guildId; // ✅ Correct: get from dynamic route
 
   if (!guildId) {
     return NextResponse.json({ error: "Missing guildId" }, { status: 400 });
@@ -32,10 +32,11 @@ export async function GET(req) {
 
     const channels = await response.json();
 
-    // Optional: sort channels like Discord
-    const sorted = channels.sort((a, b) => a.position - b.position);
+    // Sort properly (Discord order)
+    const sorted = channels.sort((a, b) => (a.position || 0) - (b.position || 0));
 
-    return NextResponse.json({ ok: true, channels: sorted });
+    // ⛔ IMPORTANT: Return array directly (not wrapped)
+    return NextResponse.json(sorted);
   } catch (err) {
     return NextResponse.json(
       { error: "Request failed", details: err.message },
