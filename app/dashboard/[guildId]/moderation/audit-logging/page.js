@@ -3,8 +3,7 @@
 import AuditLoggingTab from "@/components/moderation/AuditLoggingTab";
 
 export default function AuditLoggingPage({ params }) {
-  // MUST match folder name: [guildid]
-  const guildId = params.guildid;
+  const guildId = params.guildId; // FIXED — MUST match folder [guildId]
 
   return (
     <div className="p-6">
