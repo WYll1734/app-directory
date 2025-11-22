@@ -5,13 +5,11 @@ import ModerationTabs from "@/components/moderation/ModerationTabs";
 import RoleMultiSelect from "@/components/moderation/RoleMultiSelect";
 
 export default function AdminPage({ params }) {
-  // FIXED — must match folder name [guildid]
-  const guildId = params.guildid;
+  const guildId = params.guildId;
 
   const [roles, setRoles] = useState([]);
   const [selectedRoles, setSelectedRoles] = useState([]);
 
-  // Fetch roles from API
   useEffect(() => {
     async function loadRoles() {
       try {
@@ -20,9 +18,7 @@ export default function AdminPage({ params }) {
 
         if (!Array.isArray(data)) return;
 
-        // Sort roles by position
         const sorted = data.sort((a, b) => b.position - a.position);
-
         setRoles(sorted);
       } catch (err) {
         console.error("Failed to load roles:", err);
@@ -34,7 +30,6 @@ export default function AdminPage({ params }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-slate-50">Admin</h1>
         <p className="text-sm text-slate-400">
@@ -42,10 +37,8 @@ export default function AdminPage({ params }) {
         </p>
       </div>
 
-      {/* Tabs */}
       <ModerationTabs guildId={guildId} activeTab="admin" />
 
-      {/* Immunity Roles */}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6">
         <h2 className="text-lg font-semibold text-slate-100">Immunity Roles</h2>
 
