@@ -1,4 +1,3 @@
-// app/dashboard/[guildId]/achievements/[achievementId]/page.js
 "use client";
 
 import { useMemo, useState } from "react";
@@ -35,7 +34,6 @@ const TIER_CONFIG = [
   },
 ];
 
-// 4 options to match overview (messages / reactions / voice / threads)
 const ACTION_OPTIONS = [
   { id: "messages", label: "Member sends [count] messages" },
   { id: "reactions", label: "Member adds [count] reactions" },
@@ -50,9 +48,7 @@ export default function AchievementEditorPage({ params }) {
   const guildId = params?.guildId;
   const achievementId = params?.achievementId;
 
-  // ---------------------------------------------------------------------------
-  // ROLES for role rewards
-  // ---------------------------------------------------------------------------
+  // ===================== ROLES =====================
   const {
     data: rolesData,
     isLoading: rolesLoading,
@@ -62,15 +58,11 @@ export default function AchievementEditorPage({ params }) {
     fetcher
   );
 
-  // handle either:  [ {id, name}, ... ]  OR  { roles: [ ... ] }
-  const rolesRaw = rolesData && Array.isArray(rolesData.roles)
-    ? rolesData.roles
-    : rolesData;
+  const rolesRaw =
+    rolesData && Array.isArray(rolesData.roles) ? rolesData.roles : rolesData;
   const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
 
-  // ---------------------------------------------------------------------------
-  // MOCKED ACHIEVEMENT – replace with real fetch later
-  // ---------------------------------------------------------------------------
+  // ===================== MOCK ACHIEVEMENT =====================
   const initialAchievement = useMemo(
     () => ({
       id: achievementId || "king-of-spam",
@@ -88,7 +80,8 @@ export default function AchievementEditorPage({ params }) {
           removeRole: false,
           giveXP: false,
           giveCoins: false,
-          roleId: null,
+          giveRoleId: null,
+          removeRoleId: null,
         },
       })),
       settings: {
@@ -101,9 +94,7 @@ export default function AchievementEditorPage({ params }) {
     [achievementId]
   );
 
-  // ---------------------------------------------------------------------------
-  // STATE
-  // ---------------------------------------------------------------------------
+  // ===================== STATE =====================
   const [name, setName] = useState(initialAchievement.name);
   const [serverProgress] = useState(initialAchievement.serverProgress);
   const [actionType, setActionType] = useState(initialAchievement.actionType);
@@ -126,9 +117,7 @@ export default function AchievementEditorPage({ params }) {
 
   const [saving, setSaving] = useState(false);
 
-  // ---------------------------------------------------------------------------
-  // HANDLERS
-  // ---------------------------------------------------------------------------
+  // ===================== HANDLERS =====================
   function handleTierChange(tierId, changes) {
     setTiers((prev) =>
       prev.map((t) => (t.id === tierId ? { ...t, ...changes } : t))
@@ -151,21 +140,23 @@ export default function AchievementEditorPage({ params }) {
     );
   }
 
-  // For RoleDropdown → updates rewards.roleId
-  function handleRewardRoleUpdate(tierId, key, value) {
+  // RoleDropdown handler – supports give/remove
+  function handleRewardRoleUpdate(tierId, btnId, key, value) {
     if (key !== "roleId") return;
+
     setTiers((prev) =>
-      prev.map((t) =>
-        t.id === tierId
-          ? {
-              ...t,
-              rewards: {
-                ...t.rewards,
-                roleId: value,
-              },
-            }
-          : t
-      )
+      prev.map((t) => {
+        if (t.id !== tierId) return t;
+
+        const isRemove = String(btnId).includes("remove");
+        return {
+          ...t,
+          rewards: {
+            ...t.rewards,
+            [isRemove ? "removeRoleId" : "giveRoleId"]: value,
+          },
+        };
+      })
     );
   }
 
@@ -192,9 +183,7 @@ export default function AchievementEditorPage({ params }) {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // RENDER
-  // ---------------------------------------------------------------------------
+  // ===================== RENDER =====================
   return (
     <div className="flex h-full flex-col bg-slate-950">
       {/* TOP BAR */}
@@ -244,10 +233,10 @@ export default function AchievementEditorPage({ params }) {
         </div>
       </header>
 
-      {/* MAIN SCROLL AREA */}
+      {/* MAIN */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
         <div className="mx-auto flex max-w-5xl flex-col gap-5">
-          {/* ACHIEVEMENT PROGRESS + ACTION */}
+          {/* PROGRESS + ACTION */}
           <section className="rounded-xl border border-slate-900 bg-[#10141f] p-5 shadow-sm">
             {/* progress */}
             <div className="mb-6 rounded-lg bg-[#151927] p-4">
@@ -335,7 +324,7 @@ export default function AchievementEditorPage({ params }) {
 
                   {showEmbedEditor && (
                     <>
-                      {/* simple embed editor */}
+                      {/* embed editor */}
                       <div className="rounded-lg border border-slate-800 bg-[#050816] p-4">
                         <div className="space-y-3">
                           <div>
@@ -406,6 +395,8 @@ export default function AchievementEditorPage({ params }) {
             <div className="mt-4 space-y-3">
               {tiers.map((tier) => {
                 const expanded = expandedTierId === tier.id;
+                const tierDesc = getTierDescription(actionType, tier.count);
+
                 return (
                   <div
                     key={tier.id}
@@ -431,7 +422,7 @@ export default function AchievementEditorPage({ params }) {
                             {tier.label}
                           </p>
                           <p className="text-[11px] text-slate-400">
-                            {tier.description}
+                            {tierDesc}
                           </p>
                         </div>
                       </div>
@@ -447,7 +438,7 @@ export default function AchievementEditorPage({ params }) {
                     {/* body */}
                     {expanded && (
                       <div className="border-t border-slate-800 px-4 pb-4 pt-3">
-                        {/* customize badge + count */}
+                        {/* customize + count */}
                         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                           <button className="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800">
                             Customize badge
@@ -476,6 +467,7 @@ export default function AchievementEditorPage({ params }) {
                             Rewards
                           </p>
 
+                          {/* GIVE ROLE */}
                           <RewardToggleRow
                             label="Give a role for achieving"
                             enabled={tier.rewards.giveRole}
@@ -486,13 +478,18 @@ export default function AchievementEditorPage({ params }) {
                             <div className="mt-2 max-w-xs">
                               <RoleDropdown
                                 btn={{
-                                  id: tier.id,
-                                  roleId: tier.rewards.roleId,
+                                  id: `${tier.id}-give`,
+                                  roleId: tier.rewards.giveRoleId,
                                 }}
                                 roles={roles}
                                 loading={rolesLoading}
                                 updateButton={(id, key, value) =>
-                                  handleRewardRoleUpdate(tier.id, key, value)
+                                  handleRewardRoleUpdate(
+                                    tier.id,
+                                    id,
+                                    key,
+                                    value
+                                  )
                                 }
                               />
                               {rolesError && (
@@ -503,14 +500,40 @@ export default function AchievementEditorPage({ params }) {
                             </div>
                           </RewardToggleRow>
 
+                          {/* REMOVE ROLE */}
                           <RewardToggleRow
                             label="Remove a role for achieving"
                             enabled={tier.rewards.removeRole}
                             onChange={() =>
                               handleTierRewardToggle(tier.id, "removeRole")
                             }
-                          />
+                          >
+                            <div className="mt-2 max-w-xs">
+                              <RoleDropdown
+                                btn={{
+                                  id: `${tier.id}-remove`,
+                                  roleId: tier.rewards.removeRoleId,
+                                }}
+                                roles={roles}
+                                loading={rolesLoading}
+                                updateButton={(id, key, value) =>
+                                  handleRewardRoleUpdate(
+                                    tier.id,
+                                    id,
+                                    key,
+                                    value
+                                  )
+                                }
+                              />
+                              {rolesError && (
+                                <p className="mt-1 text-[10px] text-red-400">
+                                  Failed to load roles
+                                </p>
+                              )}
+                            </div>
+                          </RewardToggleRow>
 
+                          {/* XP */}
                           <RewardToggleRow
                             label="Give XP for achieving"
                             enabled={tier.rewards.giveXP}
@@ -519,6 +542,7 @@ export default function AchievementEditorPage({ params }) {
                             }
                           />
 
+                          {/* COINS */}
                           <RewardToggleRow
                             label="Give coins for achieving"
                             enabled={tier.rewards.giveCoins}
@@ -599,11 +623,8 @@ export default function AchievementEditorPage({ params }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// SMALL COMPONENTS
-// ---------------------------------------------------------------------------
+// ===================== SMALL COMPONENTS =====================
 
-// Blue pill toggle
 function Toggle({ enabled, onChange }) {
   return (
     <button
@@ -684,4 +705,23 @@ function TierIcon({ tierId }) {
     );
   }
   return <div className={base}>🏆</div>;
+}
+
+// ===================== HELPERS =====================
+
+function getTierDescription(actionType, count) {
+  const c = Number.isFinite(count) ? count : 0;
+
+  switch (actionType) {
+    case "messages":
+      return `Send ${c} message${c === 1 ? "" : "s"}`;
+    case "reactions":
+      return `Add ${c} reaction${c === 1 ? "" : "s"} to messages`;
+    case "voice":
+      return `Spend ${c} minute${c === 1 ? "" : "s"} in voice channels`;
+    case "threads":
+      return `Create ${c} thread${c === 1 ? "" : "s"}`;
+    default:
+      return `Reach ${c}`;
+  }
 }
