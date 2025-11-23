@@ -8,7 +8,6 @@ import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
 export default function RuleEditLayout({ guildId, ruleConfig }) {
   const {
-    id,
     title,
     description,
     extraFields,
@@ -17,29 +16,27 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // ================================
-  // STATE
-  // ================================
+  // DATA STATE
   const [roles, setRoles] = useState([]);
   const [channels, setChannels] = useState([]);
 
+  // USER SELECTIONS
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
-  // ================================
-  // FETCH ROLES + CHANNELS
-  // ================================
+  // LOAD ROLES + CHANNELS
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       setLoading(true);
+
       try {
         const [rolesRes, channelsRes] = await Promise.all([
-          fetch(`/api/discord/guilds/${guildId}/roles`),
-          fetch(`/api/discord/guilds/${guildId}/channels`),
+          fetch(`/api/discord/guild/${guildId}/roles`),
+          fetch(`/api/discord/guild/${guildId}/channels`),
         ]);
 
         const rolesJson = await rolesRes.json();
@@ -58,7 +55,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           setChannels(channelList);
         }
       } catch (e) {
-        console.error("Failed loading permissions:", e);
+        console.error("Failed loading guild data:", e);
         if (!cancelled) {
           setRoles([]);
           setChannels([]);
@@ -76,9 +73,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
   if (loading) {
     return (
-      <p className="text-slate-300 text-sm animate-pulse">
-        Loading permissions…
-      </p>
+      <p className="text-slate-300 text-sm animate-pulse">Loading server…</p>
     );
   }
 
@@ -115,7 +110,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* PERMISSIONS CARD */}
+      {/* PERMISSIONS */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-8">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-slate-200">Permissions</h2>
@@ -126,11 +121,9 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           </p>
         </div>
 
-        {/* ROLE PERMISSIONS */}
+        {/* ROLE PERMISSION BLOCK */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-slate-300">
-            Role permissions
-          </h3>
+          <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" defaultChecked />
@@ -149,11 +142,9 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           </label>
         </div>
 
-        {/* CHANNEL PERMISSIONS */}
+        {/* CHANNEL PERMISSION BLOCK */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-slate-300">
-            Channel permissions
-          </h3>
+          <h3 className="text-sm font-medium text-slate-300">Channel permissions</h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="channelPerms" defaultChecked />
