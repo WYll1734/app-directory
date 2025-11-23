@@ -1,93 +1,123 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Shield, UserRound } from "lucide-react";
 
-export default function RoleMultiSelect({ allRoles = [], selectedRoles, setSelectedRoles }) {
+export default function RoleMultiSelect({
+  allRoles = [],
+  selectedRoles = [],
+  setSelectedRoles,
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Filter available roles (hide already selected)
+  // Remove already-selected roles
+  const availableRoles = useMemo(() => {
+    const selectedIds = new Set(selectedRoles.map((r) => r.id));
+    return allRoles.filter((r) => !selectedIds.has(r.id));
+  }, [allRoles, selectedRoles]);
+
+  // Filter roles by search
   const filtered = useMemo(() => {
-    return allRoles.filter(
-      (r) =>
-        !selectedRoles.some((s) => s.id === r.id) &&
-        r.name.toLowerCase().includes(query.toLowerCase())
+    return availableRoles.filter((r) =>
+      r.name.toLowerCase().includes(query.toLowerCase())
     );
-  }, [allRoles, selectedRoles, query]);
+  }, [availableRoles, query]);
 
-  // Add role + auto-close
-  function addRole(role) {
+  // ===================================
+  // Helpers
+  // ===================================
+  const addRole = (role) => {
     setSelectedRoles([...selectedRoles, role]);
-    setQuery("");
-    setOpen(false); // <-- 🔥 AUTO CLOSE HERE
-  }
+    // DO NOT close — multi-select stays open
+  };
 
-  // Remove role
-  function removeRole(roleId) {
-    setSelectedRoles(selectedRoles.filter((r) => r.id !== roleId));
-  }
+  const removeRole = (id) => {
+    setSelectedRoles(selectedRoles.filter((r) => r.id !== id));
+  };
+
+  const iconFor = (role) => {
+    if (role.managed) return <Shield size={14} className="text-indigo-300" />;
+    return <UserRound size={14} className="text-slate-300" />;
+  };
 
   return (
     <div className="relative w-full">
-      {/* Selected roles pills */}
-      <div
-        className="w-full bg-slate-800/70 border border-slate-700 rounded-lg px-3 py-2 flex flex-wrap gap-2 cursor-pointer"
-        onClick={() => setOpen(!open)}
-      >
-        {selectedRoles.length === 0 ? (
-          <span className="text-slate-400 text-sm">Select roles…</span>
-        ) : (
-          selectedRoles.map((role) => (
-            <div
-              key={role.id}
-              className="flex items-center gap-2 bg-slate-700/70 text-slate-200 text-xs px-2 py-1 rounded-md"
+      {/* Selected chips */}
+      {selectedRoles.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {selectedRoles.map((r) => (
+            <span
+              key={r.id}
+              className="flex items-center gap-2 bg-slate-800 border border-slate-700
+                         text-slate-200 text-xs px-2 py-1 rounded-lg"
             >
-              {role.name}
+              {iconFor(r)} {r.name}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeRole(role.id);
-                }}
+                onClick={() => removeRole(r.id)}
+                className="text-slate-400 hover:text-red-400"
               >
-                <X size={12} className="text-slate-400 hover:text-red-400" />
+                <X size={12} />
               </button>
-            </div>
-          ))
-        )}
+            </span>
+          ))}
+        </div>
+      )}
 
-        <ChevronDown size={16} className="ml-auto text-slate-400" />
+      {/* Trigger */}
+      <div
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full bg-slate-800/70 border border-slate-700 rounded-lg px-3 py-2
+                   flex items-center justify-between cursor-pointer transition
+                   hover:bg-slate-700/60"
+      >
+        <span className="text-sm text-slate-300">
+          {selectedRoles.length === 0
+            ? "Select roles…"
+            : "Add more roles…"}
+        </span>
+
+        <ChevronDown
+          size={16}
+          className={`text-slate-400 transition ${open ? "rotate-180" : ""}`}
+        />
       </div>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-72 overflow-y-auto">
-
-          {/* Search */}
+        <div
+          className="absolute z-50 mt-2 w-full max-h-72 overflow-y-auto
+                     bg-slate-900 border border-slate-700 rounded-lg shadow-xl"
+        >
+          {/* Search Box */}
           <div className="p-2 border-b border-slate-800">
             <input
-              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
-              placeholder="Search roles..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
+              placeholder="Search roles…"
+              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700
+                         text-sm text-slate-200 placeholder-slate-500"
             />
           </div>
 
-          {/* List */}
+          {/* Role List */}
           <div className="p-2 space-y-1">
-            {filtered.length === 0 ? (
-              <p className="text-center text-slate-600 text-sm py-2">No roles found</p>
-            ) : (
+            {filtered.length > 0 ? (
               filtered.map((role) => (
                 <button
                   key={role.id}
-                  className="w-full text-left text-sm text-slate-200 px-3 py-2 rounded hover:bg-slate-800"
+                  type="button"
                   onClick={() => addRole(role)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm
+                             text-slate-200 hover:bg-slate-800 transition"
                 >
-                  {role.name}
+                  {iconFor(role)} {role.name}
                 </button>
               ))
+            ) : (
+              <p className="text-center text-sm text-slate-500 py-3">
+                No roles found
+              </p>
             )}
           </div>
         </div>
