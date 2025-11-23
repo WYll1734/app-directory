@@ -3,7 +3,9 @@
 import { useState } from "react";
 import useSWR from "swr";
 
+import ModerationTabs from "@/components/moderation/ModerationTabs";
 import Toggle from "@/components/ui/Toggle";
+
 import ChannelDropdown from "@/components/inputs/ChannelDropdown";
 import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
@@ -11,18 +13,18 @@ const fetcher = (url) => fetch(url).then((r) => r.json());
 
 export default function AuditLoggingTab({ guildId }) {
   const { data, isLoading } = useSWR(
-    `/api/discord/guilds/${guildId}/channels`,
+    `/api/discord/guild/${guildId}/channels`,
     fetcher
   );
 
   const channels = data?.channels ?? [];
 
-  // Core states
+  // ============= CORE STATE =============
   const [loggingEnabled, setLoggingEnabled] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [ignoredChannels, setIgnoredChannels] = useState([]);
 
-  // Event toggles
+  // ============= EVENT STATES =============
   const [eventMute, setEventMute] = useState(true);
   const [eventUnmute, setEventUnmute] = useState(true);
   const [eventBan, setEventBan] = useState(true);
@@ -53,13 +55,23 @@ export default function AuditLoggingTab({ guildId }) {
   const [ignoreBots, setIgnoreBots] = useState(true);
   const [noThumbnails, setNoThumbnails] = useState(false);
 
+  // ============= LOADING =============
   if (isLoading && !data) {
-    return <p className="text-slate-300 text-sm animate-pulse">Loading channels…</p>;
+    return (
+      <p className="text-slate-300 text-sm animate-pulse">Loading channels…</p>
+    );
   }
 
+  // =============================================================
+  //                        RENDER
+  // =============================================================
   return (
-    <div className="space-y-6">
-      {/* Header row */}
+    <div className="space-y-8">
+
+      {/* ===== Top Navigation Tabs ===== */}
+      <ModerationTabs guildId={guildId} activeTab="audit-logging" />
+
+      {/* ===== Header ===== */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-50">Audit Logging</h2>
@@ -74,10 +86,11 @@ export default function AuditLoggingTab({ guildId }) {
         </div>
       </div>
 
-      {/* MAIN CARD */}
+      {/* ===== Main Card ===== */}
       <section className="rounded-xl border border-slate-800 bg-slate-900/70">
         <div className="px-6 py-6 space-y-8">
-          {/* Logging channel (single) */}
+
+          {/* ===== Logging Channel (single-select) ===== */}
           <div className="space-y-2">
             <label className="text-xs text-slate-300">
               Logging Channel <span className="text-red-400">*</span>
@@ -90,10 +103,12 @@ export default function AuditLoggingTab({ guildId }) {
             />
           </div>
 
-          {/* Event groups grid */}
+          {/* ===== Events Grid ===== */}
           <div className="grid gap-10 md:grid-cols-2">
-            {/* LEFT SIDE */}
+
+            {/* LEFT COLUMN */}
             <div className="space-y-8">
+
               <EventGroup title="Moderation Events">
                 <ToggleRow label="Member muted" value={eventMute} onChange={setEventMute} />
                 <ToggleRow label="Member unmuted" value={eventUnmute} onChange={setEventUnmute} />
@@ -112,10 +127,12 @@ export default function AuditLoggingTab({ guildId }) {
                 <ToggleRow label="Channel updated" value={eventRoleUpdate} onChange={setEventRoleUpdate} />
                 <ToggleRow label="Channel deleted" value={eventRoleDelete} onChange={setEventRoleDelete} />
               </EventGroup>
+
             </div>
 
-            {/* RIGHT SIDE */}
+            {/* RIGHT COLUMN */}
             <div className="space-y-8">
+
               <EventGroup title="Member Events">
                 <ToggleRow label="Nickname changed" value={eventNick} onChange={setEventNick} />
                 <ToggleRow label="Member banned" value={eventMemberBan} onChange={setEventMemberBan} />
@@ -129,11 +146,7 @@ export default function AuditLoggingTab({ guildId }) {
                 <ToggleRow label="Role created" value={eventRoleCreate} onChange={setEventRoleCreate} />
                 <ToggleRow label="Role updated" value={eventRoleUpdate} onChange={setEventRoleUpdate} />
                 <ToggleRow label="Role deleted" value={eventRoleDelete} onChange={setEventRoleDelete} />
-                <ToggleRow
-                  label="Member roles changed"
-                  value={eventRoleMemberChange}
-                  onChange={setEventRoleMemberChange}
-                />
+                <ToggleRow label="Member roles changed" value={eventRoleMemberChange} onChange={setEventRoleMemberChange} />
               </EventGroup>
 
               <EventGroup title="Voice Events">
@@ -145,22 +158,23 @@ export default function AuditLoggingTab({ guildId }) {
                 <ToggleRow label="Server edited" value={eventServerEdit} onChange={setEventServerEdit} />
                 <ToggleRow label="Emojis updated" value={eventEmojiUpdate} onChange={setEventEmojiUpdate} />
               </EventGroup>
+
             </div>
           </div>
         </div>
       </section>
 
-      {/* IGNORED CHANNELS + EXTRA SETTINGS */}
+      {/* ===== IGNORED CHANNELS ===== */}
       <section className="rounded-xl border border-slate-800 bg-slate-900/70">
         <div className="px-6 py-6 space-y-6">
+
           <div>
             <h3 className="text-base font-semibold text-slate-50">Ignored Channels</h3>
             <p className="text-xs text-slate-400 max-w-xl">
-              Messages updated/deleted in these channels will be ignored.
+              Messages updated/deleted in these channels will NOT be logged.
             </p>
           </div>
 
-          {/* MULTI-SELECT IGNORED CHANNELS */}
           <ChannelMultiSelect
             channels={channels}
             values={ignoredChannels}
@@ -177,19 +191,24 @@ export default function AuditLoggingTab({ guildId }) {
               value={ignoreBots}
               onChange={setIgnoreBots}
             />
+
             <ToggleRow
               label="Don't display user thumbnails"
               value={noThumbnails}
               onChange={setNoThumbnails}
             />
           </div>
+
         </div>
       </section>
+
     </div>
   );
 }
 
-/* REUSABLE COMPONENTS */
+/* =============================================================
+                          SUB COMPONENTS
+============================================================= */
 
 function EventGroup({ title, children }) {
   return (
