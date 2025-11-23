@@ -7,54 +7,48 @@ import Image from "next/image";
 import {
   ChevronLeft,
   ChevronDown,
-  ChevronRight,
-  Filter,
   Search,
+  Filter,
+  Star,
+  Trophy,
   X,
-  Check,
 } from "lucide-react";
 
-// ---------------------------------------------------------------------------
-// ICONS – must exist in /public (or change these paths)
-// ---------------------------------------------------------------------------
-const tierIcons = {
-  bronze: "/Bronze.png",
-  silver: "/Silver.png",
-  gold: "/gold.png",
-  diamond: "/Diamond.png",
-};
+/**
+ * ---------------------------------------------------------------------------
+ *  BASIC CONFIG
+ * ---------------------------------------------------------------------------
+ */
 
-// ---------------------------------------------------------------------------
-// MOCK DATA – replace with real DB / API later
-// ---------------------------------------------------------------------------
-const MOCK_ROLES = [
-  {
-    id: "111",
-    name: "Everyone",
-    color: "#80848e",
-    isDefault: true,
-  },
-  {
-    id: "222",
-    name: "Active Member",
-    color: "#57f287",
-  },
-  {
-    id: "333",
-    name: "OG Member",
-    color: "#f1c40f",
-  },
-  {
-    id: "444",
-    name: "Moderator",
-    color: "#5865f2",
-  },
-  {
-    id: "555",
-    name: "Admin",
-    color: "#ed4245",
-  },
+const CATEGORY_TABS = [
+  { id: "all", label: "All" },
+  { id: "messages", label: "Messages" },
+  { id: "reactions", label: "Reactions" },
+  { id: "voice", label: "Voice" },
+  { id: "activity", label: "Activity" },
+  { id: "levels", label: "Levels" },
+  { id: "staff", label: "Staff / Mod" },
 ];
+
+const FILTER_MODES = [
+  { id: "all", label: "All" },
+  { id: "earned", label: "Unlocked" },
+  { id: "locked", label: "Locked" },
+];
+
+const SORT_MODES = [
+  { id: "recommended", label: "Recommended" },
+  { id: "progress", label: "Progress" },
+  { id: "tier", label: "Tier" },
+  { id: "rarity", label: "Rarest" },
+  { id: "name", label: "Name A→Z" },
+];
+
+/**
+ * ---------------------------------------------------------------------------
+ *  MOCK DATA (replace with DB later)
+ * ---------------------------------------------------------------------------
+ */
 
 const MOCK_ACHIEVEMENTS = [
   {
@@ -66,8 +60,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 1,
     progress: 1,
     earned: true,
-    rarity: 0.88,
-    roles: ["111"],
+    rarity: 0.75,
   },
   {
     id: "king-of-spam",
@@ -78,8 +71,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 10000,
     progress: 7234,
     earned: false,
-    rarity: 0.04,
-    roles: ["222", "333"],
+    rarity: 0.05,
   },
   {
     id: "reaction-enjoyer",
@@ -90,8 +82,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 100,
     progress: 86,
     earned: false,
-    rarity: 0.21,
-    roles: ["111", "222"],
+    rarity: 0.3,
   },
   {
     id: "reaction-master",
@@ -102,8 +93,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 500,
     progress: 120,
     earned: false,
-    rarity: 0.09,
-    roles: ["222", "333"],
+    rarity: 0.12,
   },
   {
     id: "voice-chatter",
@@ -114,8 +104,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 600,
     progress: 340,
     earned: false,
-    rarity: 0.17,
-    roles: ["111", "222"],
+    rarity: 0.18,
   },
   {
     id: "night-owl",
@@ -126,8 +115,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 5,
     progress: 2,
     earned: false,
-    rarity: 0.03,
-    roles: ["222", "333", "444"],
+    rarity: 0.04,
   },
   {
     id: "server-regular",
@@ -138,8 +126,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 30,
     progress: 19,
     earned: false,
-    rarity: 0.12,
-    roles: ["222"],
+    rarity: 0.1,
   },
   {
     id: "year-one",
@@ -150,8 +137,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 365,
     progress: 280,
     earned: false,
-    rarity: 0.01,
-    roles: ["333"],
+    rarity: 0.02,
   },
   {
     id: "level-10",
@@ -162,8 +148,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 10,
     progress: 10,
     earned: true,
-    rarity: 0.42,
-    roles: ["111"],
+    rarity: 0.45,
   },
   {
     id: "level-50",
@@ -174,8 +159,7 @@ const MOCK_ACHIEVEMENTS = [
     goal: 50,
     progress: 32,
     earned: false,
-    rarity: 0.05,
-    roles: ["222", "333"],
+    rarity: 0.06,
   },
   {
     id: "level-100",
@@ -186,86 +170,65 @@ const MOCK_ACHIEVEMENTS = [
     goal: 100,
     progress: 62,
     earned: false,
-    rarity: 0.01,
-    roles: ["333"],
+    rarity: 0.02,
   },
   {
     id: "mod-helper",
     name: "Helper",
     description: "Reply to 50 messages in help channels.",
-    category: "moderation",
+    category: "staff",
     tier: "silver",
     goal: 50,
     progress: 18,
     earned: false,
     rarity: 0.16,
-    roles: ["444"],
   },
   {
     id: "mod-hammer",
     name: "Ban Hammer",
-    description: "Issue 25 successful moderations (warn/mute/ban).",
-    category: "moderation",
+    description: "Issue 25 successful moderations (warn / mute / ban).",
+    category: "staff",
     tier: "gold",
     goal: 25,
     progress: 9,
     earned: false,
-    rarity: 0.02,
-    roles: ["444", "555"],
+    rarity: 0.03,
   },
 ];
 
-// ---------------------------------------------------------------------------
-// CONSTANTS
-// ---------------------------------------------------------------------------
-const CATEGORY_TABS = [
-  { id: "all", label: "All Achievements" },
-  { id: "messages", label: "Messages" },
-  { id: "reactions", label: "Reactions" },
-  { id: "voice", label: "Voice" },
-  { id: "activity", label: "Activity" },
-  { id: "levels", label: "Levels" },
-  { id: "moderation", label: "Staff / Mod" },
-];
+/**
+ * ---------------------------------------------------------------------------
+ *  MAIN PAGE – "Old school" thick UI
+ * ---------------------------------------------------------------------------
+ */
 
-const SORT_OPTIONS = [
-  { id: "recommended", label: "Recommended" },
-  { id: "rarity", label: "Rarity (rarest first)" },
-  { id: "tier", label: "Tier (high → low)" },
-  { id: "progress", label: "Progress (highest → lowest)" },
-  { id: "name", label: "Name (A → Z)" },
-];
-
-// ---------------------------------------------------------------------------
-// MAIN PAGE COMPONENT – BIG BOY VERSION
-// ---------------------------------------------------------------------------
 export default function AchievementsPage({ params }) {
   const guildId = params?.guildId;
 
-  // category/filter/sort state
+  // Tabs / filters
   const [activeCategory, setActiveCategory] = useState("all");
+  const [filterMode, setFilterMode] = useState("all"); // all / earned / locked
+  const [sortMode, setSortMode] = useState("recommended");
+
+  // Toggles
+  const [showProgress, setShowProgress] = useState(true);
+  const [showRarity, setShowRarity] = useState(true);
+  const [showTierBadges, setShowTierBadges] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
+
+  // Search + "advanced" toggle
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("recommended");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // toggle switches (Discord-style: label left, switch right)
-  const [showOnlyEarned, setShowOnlyEarned] = useState(false);
-  const [showOnlyLocked, setShowOnlyLocked] = useState(false);
-  const [showProgressBars, setShowProgressBars] = useState(true);
-  const [highlightHighTier, setHighlightHighTier] = useState(true);
+  const achievements = useMemo(() => MOCK_ACHIEVEMENTS, []);
 
-  // role filter dropdown
-  const [selectedRoleIds, setSelectedRoleIds] = useState(["111"]); // default Everyone
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
-
-  // computed stats
-  const allAchievements = useMemo(() => MOCK_ACHIEVEMENTS, []);
-  const allRoles = useMemo(() => MOCK_ROLES, []);
-
+  // Overall stats
   const stats = useMemo(() => {
-    const total = allAchievements.length;
-    const earned = allAchievements.filter((a) => a.earned).length;
+    const total = achievements.length;
+    const earned = achievements.filter((a) => a.earned).length;
+    const locked = total - earned;
 
-    const tierCounts = allAchievements.reduce(
+    const tierCounts = achievements.reduce(
       (acc, a) => {
         acc[a.tier] = (acc[a.tier] || 0) + 1;
         return acc;
@@ -278,21 +241,29 @@ export default function AchievementsPage({ params }) {
     return {
       total,
       earned,
+      locked,
       completion,
       tierCounts,
     };
-  }, [allAchievements]);
+  }, [achievements]);
 
-  // filtered + sorted achievements
+  // Filter + sort list
   const visibleAchievements = useMemo(() => {
-    let list = [...allAchievements];
+    let list = [...achievements];
 
-    // Category filter
+    // Category
     if (activeCategory !== "all") {
       list = list.filter((a) => a.category === activeCategory);
     }
 
-    // Search filter
+    // Filter mode
+    if (filterMode === "earned") {
+      list = list.filter((a) => a.earned);
+    } else if (filterMode === "locked") {
+      list = list.filter((a) => !a.earned);
+    }
+
+    // Search
     if (search.trim().length > 0) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -302,72 +273,50 @@ export default function AchievementsPage({ params }) {
       );
     }
 
-    // Role filter – if at least one role selected, show only achievements
-    // that have ANY matching role.
-    if (selectedRoleIds.length > 0) {
-      list = list.filter((a) =>
-        a.roles.some((rid) => selectedRoleIds.includes(rid))
-      );
-    }
-
-    // Toggle filters
-    if (showOnlyEarned && !showOnlyLocked) {
-      list = list.filter((a) => a.earned);
-    } else if (showOnlyLocked && !showOnlyEarned) {
-      list = list.filter((a) => !a.earned);
-    }
-
-    // Sorting
+    // Sort
     list.sort((a, b) => {
-      switch (sortBy) {
-        case "rarity":
-          // rarer first = smaller rarity value first
-          return a.rarity - b.rarity;
-        case "tier":
-          return tierRank(b.tier) - tierRank(a.tier);
+      switch (sortMode) {
+        case "name":
+          return a.name.localeCompare(b.name);
         case "progress": {
           const aPct = a.progress / Math.max(a.goal, 1);
           const bPct = b.progress / Math.max(b.goal, 1);
           return bPct - aPct;
         }
-        case "name":
-          return a.name.localeCompare(b.name);
-        default:
-        case "recommended": {
-          // Example "recommended" sorter:
-          // 1) Earned achievements with high tier first
-          // 2) Then by progress
-          // 3) Then by rarity
+        case "tier":
+          return tierRank(b.tier) - tierRank(a.tier);
+        case "rarity":
+          return a.rarity - b.rarity; // rarer first
+        case "recommended":
+        default: {
           const aScore =
-            (a.earned ? 50 : 0) +
+            (a.earned ? 40 : 0) +
             tierRank(a.tier) * 10 +
-            (a.progress / Math.max(a.goal, 1)) * 25 -
-            a.rarity * 20;
+            (a.progress / Math.max(a.goal, 1)) * 20 -
+            a.rarity * 15;
           const bScore =
-            (b.earned ? 50 : 0) +
+            (b.earned ? 40 : 0) +
             tierRank(b.tier) * 10 +
-            (b.progress / Math.max(b.goal, 1)) * 25 -
-            b.rarity * 20;
+            (b.progress / Math.max(b.goal, 1)) * 20 -
+            b.rarity * 15;
           return bScore - aScore;
         }
       }
     });
 
     return list;
-  }, [
-    allAchievements,
-    activeCategory,
-    search,
-    sortBy,
-    selectedRoleIds,
-    showOnlyEarned,
-    showOnlyLocked,
-  ]);
+  }, [achievements, activeCategory, filterMode, search, sortMode]);
+
+  /**
+   * -------------------------------------------------------------------------
+   *  RENDER
+   * -------------------------------------------------------------------------
+   */
 
   return (
     <div className="flex h-full flex-col gap-4">
       {/* ------------------------------------------------------------------ */}
-      {/* TOP NAV / BREADCRUMB                                              */}
+      {/* TOP BAR / BREADCRUMB                                              */}
       {/* ------------------------------------------------------------------ */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -381,13 +330,16 @@ export default function AchievementsPage({ params }) {
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-white">Achievements</h1>
+              <h1 className="text-xl font-semibold text-white">
+                Achievements
+              </h1>
               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
                 BETA
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              Design and track flex-worthy milestones for your community.
+              Create flex-worthy milestones for your members. Unlock, grind,
+              and show off.
             </p>
           </div>
         </div>
@@ -395,24 +347,24 @@ export default function AchievementsPage({ params }) {
         <div className="flex items-center gap-2">
           {guildId && (
             <span className="hidden rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-xs text-slate-300 sm:inline-flex">
-              Guild ID:{" "}
+              Guild ID:
               <span className="ml-1 font-mono text-slate-100">{guildId}</span>
             </span>
           )}
 
-          <button className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/15">
+          <button className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/15">
             <Filter className="h-3.5 w-3.5" />
-            <span>Auto-tune rewards (coming soon)</span>
+            <span>Auto-balance rewards (soon)</span>
           </button>
         </div>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* HEADER ROW – PROFILE SUMMARY + TIER LEGEND                         */}
+      {/* HEADER STATS + USER CARD                                          */}
       {/* ------------------------------------------------------------------ */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr),minmax(0,1.4fr)]">
-        {/* Left: user/server overview */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2.3fr),minmax(0,1.7fr)]">
+        {/* Left: User overview + progress */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="relative h-14 w-14 overflow-hidden rounded-full border border-slate-700 bg-slate-900">
@@ -438,7 +390,7 @@ export default function AchievementsPage({ params }) {
 
             <div className="flex flex-col items-end gap-1 text-right">
               <p className="text-xs text-slate-400">Overall completion</p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-800">
                   <div
                     className="h-full rounded-full bg-emerald-500"
@@ -454,110 +406,112 @@ export default function AchievementsPage({ params }) {
 
           {/* Stats row */}
           <div className="mt-4 grid gap-3 sm:grid-cols-4">
-            <HeaderStat
-              label="Total Achievements"
+            <StatCard
+              label="Total"
               value={stats.total}
-              sub="Available"
+              sub="Achievements"
+              accent="default"
             />
-            <HeaderStat
+            <StatCard
               label="Unlocked"
               value={stats.earned}
               sub="Completed"
               accent="emerald"
             />
-            <HeaderStat
-              label="Gold & Diamond"
-              value={stats.tierCounts.gold + stats.tierCounts.diamond}
-              sub="High tier"
+            <StatCard
+              label="Locked"
+              value={stats.locked}
+              sub="To unlock"
+              accent="warning"
             />
-            <HeaderStat
-              label="Bronze & Silver"
-              value={stats.tierCounts.bronze + stats.tierCounts.silver}
-              sub="Starter"
+            <StatCard
+              label="High tier"
+              value={stats.tierCounts.gold + stats.tierCounts.diamond}
+              sub="Gold + Diamond"
+              accent="tier"
             />
           </div>
 
-          {/* Mini explanation / hint */}
-          <div className="mt-4 rounded-xl border border-slate-800/70 bg-slate-950/80 px-3 py-2.5 text-xs text-slate-400">
+          {/* Little hint box */}
+          <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-xs text-slate-400">
             <p>
-              Tip: Use{" "}
-              <span className="font-medium text-emerald-400">
-                role filters
+              Tip: Use the{" "}
+              <span className="font-semibold text-emerald-400">
+                filters below
               </span>{" "}
-              on the right to preview how the achievements look for different
-              segments of your server.
+              to focus on locked achievements or a specific category like
+              Messages, Voice or Staff.
             </p>
           </div>
         </div>
 
-        {/* Right: tier legend + rarity breakdown */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
+        {/* Right: Tier breakdown - more old-style, chunky rows */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-white">
-                Tiers & Rarities
+                Tier breakdown
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                Use tiers to define how grindy or rare each achievement is.
+                Each tier represents how grindy or rare the achievement is.
               </p>
             </div>
             <button className="inline-flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-slate-900">
-              <span>View rewards</span>
-              <ChevronRight className="h-3 w-3" />
+              <Trophy className="h-3.5 w-3.5" />
+              <span>View examples</span>
             </button>
           </div>
 
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <TierLegendItem
-              icon={tierIcons.bronze}
+          <div className="mt-3 flex flex-col gap-2">
+            <TierRow
+              tier="bronze"
               label="Bronze"
-              description="Super easy starter achievements. Good for onboarding."
               count={stats.tierCounts.bronze}
+              description="Very easy starter achievements. Good for onboarding."
             />
-            <TierLegendItem
-              icon={tierIcons.silver}
+            <TierRow
+              tier="silver"
               label="Silver"
-              description="Mildly grindy – players should see these regularly."
               count={stats.tierCounts.silver}
+              description="Takes a bit of effort. People hit these often."
             />
-            <TierLegendItem
-              icon={tierIcons.gold}
+            <TierRow
+              tier="gold"
               label="Gold"
-              description="Hard or time-consuming. Starts to feel special."
               count={stats.tierCounts.gold}
+              description="Harder, longer-term grinds or high-skill stuff."
             />
-            <TierLegendItem
-              icon={tierIcons.diamond}
+            <TierRow
+              tier="diamond"
               label="Diamond"
-              description="Ultra-rare achievements for your top 1% grinders."
               count={stats.tierCounts.diamond}
+              description="Ultra-rare flex rewards for your top 1% grinders."
             />
           </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* FILTER BAR – CATEGORY TABS + SEARCH + ROLE FILTER + TOGGLES        */}
+      {/* CATEGORY TABS ROW (big pills)                                     */}
       {/* ------------------------------------------------------------------ */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3 sm:p-4">
-        {/* Category tabs */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3 sm:px-4 sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {CATEGORY_TABS.map((tab) => {
-              const isActive = activeCategory === tab.id;
+              const active = tab.id === activeCategory;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveCategory(tab.id)}
                   className={[
                     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition",
-                    isActive
-                      ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-300"
+                    active
+                      ? "border-emerald-500/80 bg-emerald-500/10 text-emerald-300"
                       : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900",
                   ].join(" ")}
                 >
                   <span>{tab.label}</span>
-                  {isActive && (
+                  {active && (
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   )}
                 </button>
@@ -565,15 +519,56 @@ export default function AchievementsPage({ params }) {
             })}
           </div>
 
-          {/* Search + sort */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Sort dropdown very “old style” */}
+          <SortChip
+            sortMode={sortMode}
+            setSortMode={setSortMode}
+          />
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* FILTERS STRIP: Filter mode pills + toggles + search                */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3 sm:px-4 sm:py-4">
+        {/* Filter mode row */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Left: Filter mode pills */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {FILTER_MODES.map((f) => {
+              const active = f.id === filterMode;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterMode(f.id)}
+                  className={[
+                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition",
+                    active
+                      ? "border-emerald-500/80 bg-emerald-500/10 text-emerald-300"
+                      : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900",
+                  ].join(" ")}
+                >
+                  {f.id === "earned" && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  )}
+                  {f.id === "locked" && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                  )}
+                  <span>{f.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Right: search box */}
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300">
               <Search className="h-3.5 w-3.5 text-slate-500" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search achievements…"
-                className="w-32 bg-transparent text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none sm:w-44"
+                className="w-32 bg-transparent text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none sm:w-48"
               />
               {search && (
                 <button
@@ -585,70 +580,55 @@ export default function AchievementsPage({ params }) {
               )}
             </div>
 
-            <SortDropdown sortBy={sortBy} setSortBy={setSortBy} />
+            <button
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] text-slate-300 hover:bg-slate-900"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              <span>Advanced</span>
+              <ChevronDown
+                className={`h-3 w-3 transition ${showAdvanced ? "rotate-180" : "rotate-0"}`}
+              />
+            </button>
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="mt-3 h-px w-full bg-slate-800/80" />
-
-        {/* Lower filter row: role filter + toggles */}
-        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Left: role filter dropdown */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-              Role view:
-            </span>
-            <RoleFilterDropdown
-              allRoles={allRoles}
-              selectedRoleIds={selectedRoleIds}
-              setSelectedRoleIds={setSelectedRoleIds}
-              open={roleDropdownOpen}
-              setOpen={setRoleDropdownOpen}
-            />
-          </div>
-
-          {/* Right: toggles row – Discord style (label left, switch right) */}
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <FilterToggle
-              label="Show only earned"
-              description="Hide locked achievements."
-              enabled={showOnlyEarned}
-              onChange={(value) => {
-                setShowOnlyEarned(value);
-                if (value) setShowOnlyLocked(false);
-              }}
-            />
-            <FilterToggle
-              label="Show only locked"
-              description="Focus on what’s left to unlock."
-              enabled={showOnlyLocked}
-              onChange={(value) => {
-                setShowOnlyLocked(value);
-                if (value) setShowOnlyEarned(false);
-              }}
-            />
-            <FilterToggle
+        {/* Advanced toggles row – just like the old “too much stuff” layout */}
+        {showAdvanced && (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <ToggleRow
               label="Show progress bars"
-              description="Display progress towards each goal."
-              enabled={showProgressBars}
-              onChange={setShowProgressBars}
+              description="Display % towards each goal."
+              enabled={showProgress}
+              onChange={setShowProgress}
             />
-            <FilterToggle
-              label="Highlight high tiers"
-              description="Visually boost Gold & Diamond."
-              enabled={highlightHighTier}
-              onChange={setHighlightHighTier}
+            <ToggleRow
+              label="Show rarity info"
+              description="Common, Rare, Ultra Rare, etc."
+              enabled={showRarity}
+              onChange={setShowRarity}
+            />
+            <ToggleRow
+              label="Show tier badges"
+              description="Bronze / Silver / Gold / Diamond chips."
+              enabled={showTierBadges}
+              onChange={setShowTierBadges}
+            />
+            <ToggleRow
+              label="Compact card mode"
+              description="Smaller cards, less padding."
+              enabled={compactMode}
+              onChange={setCompactMode}
             />
           </div>
-        </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------------------ */}
-      {/* MAIN GRID – ACHIEVEMENT CARDS                                      */}
+      {/* MAIN GRID – Achievements list                                      */}
       {/* ------------------------------------------------------------------ */}
-      <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950/80 p-3 sm:p-4">
-        {/* Summary row */}
+      <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3 sm:px-4 sm:py-4">
+        {/* Little header row (count + info) */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
           <div className="flex items-center gap-2">
             <span>
@@ -656,23 +636,22 @@ export default function AchievementsPage({ params }) {
               <span className="font-semibold text-slate-200">
                 {visibleAchievements.length}
               </span>{" "}
-              / {allAchievements.length} achievements
+              / {achievements.length} achievements
             </span>
             {activeCategory !== "all" && (
               <>
-                <span className="text-slate-600">•</span>
+                <span className="text-slate-700">•</span>
                 <span>Category: {labelForCategory(activeCategory)}</span>
               </>
             )}
           </div>
           <div className="flex items-center gap-1">
             <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400">
-              Filters applied:{" "}
+              Filters:{" "}
               {[
-                showOnlyEarned ? "earned" : null,
-                showOnlyLocked ? "locked" : null,
-                selectedRoleIds.length > 0 ? "role" : null,
+                filterMode !== "all" ? filterMode : null,
                 search ? "search" : null,
+                showAdvanced ? "advanced" : null,
               ]
                 .filter(Boolean)
                 .join(", ") || "none"}
@@ -681,36 +660,32 @@ export default function AchievementsPage({ params }) {
         </div>
 
         {visibleAchievements.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/70 px-4 py-10 text-center">
-            <p className="text-sm font-medium text-slate-200">
-              No achievements match your filters.
-            </p>
-            <p className="text-xs text-slate-400">
-              Try clearing some filters, or switching category or roles.
-            </p>
-            <button
-              onClick={() => {
-                setShowOnlyEarned(false);
-                setShowOnlyLocked(false);
-                setSelectedRoleIds(["111"]);
-                setSearch("");
-                setSortBy("recommended");
-              }}
-              className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
-            >
-              <X className="h-3 w-3" />
-              <span>Reset filters</span>
-            </button>
-          </div>
+          <EmptyState
+            onReset={() => {
+              setFilterMode("all");
+              setSearch("");
+              setShowAdvanced(false);
+              setShowProgress(true);
+              setShowRarity(true);
+              setShowTierBadges(true);
+              setCompactMode(false);
+            }}
+          />
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {visibleAchievements.map((ach) => (
+          <div
+            className={[
+              "grid gap-3",
+              compactMode ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-2",
+            ].join(" ")}
+          >
+            {visibleAchievements.map((a) => (
               <AchievementCard
-                key={ach.id}
-                achievement={ach}
-                showProgressBars={showProgressBars}
-                highlightHighTier={highlightHighTier}
-                allRoles={allRoles}
+                key={a.id}
+                achievement={a}
+                showProgress={showProgress}
+                showRarity={showRarity}
+                showTierBadges={showTierBadges}
+                compact={compactMode}
               />
             ))}
           </div>
@@ -720,9 +695,12 @@ export default function AchievementsPage({ params }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// HELPER FUNCTIONS
-// ---------------------------------------------------------------------------
+/**
+ * ---------------------------------------------------------------------------
+ *  HELPER FUNCTIONS
+ * ---------------------------------------------------------------------------
+ */
+
 function tierRank(tier) {
   switch (tier) {
     case "bronze":
@@ -743,15 +721,22 @@ function labelForCategory(id) {
   return found?.label ?? "All";
 }
 
-// ---------------------------------------------------------------------------
-// SMALL SUBCOMPONENTS
-// ---------------------------------------------------------------------------
+/**
+ * ---------------------------------------------------------------------------
+ *  SMALL / SUB COMPONENTS
+ * ---------------------------------------------------------------------------
+ */
 
-function HeaderStat({ label, value, sub, accent = "slate" }) {
-  const accentClasses =
-    accent === "emerald"
-      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-      : "border-slate-700 bg-slate-900 text-slate-200";
+function StatCard({ label, value, sub, accent = "default" }) {
+  let accentClasses = "border-slate-800 bg-slate-950 text-slate-200";
+  if (accent === "emerald") {
+    accentClasses =
+      "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
+  } else if (accent === "warning") {
+    accentClasses = "border-yellow-500/40 bg-yellow-500/10 text-yellow-200";
+  } else if (accent === "tier") {
+    accentClasses = "border-sky-500/40 bg-sky-500/10 text-sky-200";
+  }
 
   return (
     <div
@@ -766,67 +751,73 @@ function HeaderStat({ label, value, sub, accent = "slate" }) {
   );
 }
 
-function TierLegendItem({ icon, label, description, count }) {
+function TierRow({ tier, label, count, description }) {
+  let pillClasses = "";
+  if (tier === "bronze") {
+    pillClasses =
+      "border-amber-500/60 bg-amber-500/10 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.25)]";
+  } else if (tier === "silver") {
+    pillClasses =
+      "border-slate-400/70 bg-slate-600/20 text-slate-100 shadow-[0_0_10px_rgba(148,163,184,0.25)]";
+  } else if (tier === "gold") {
+    pillClasses =
+      "border-yellow-400/80 bg-yellow-500/15 text-yellow-100 shadow-[0_0_12px_rgba(250,204,21,0.4)]";
+  } else if (tier === "diamond") {
+    pillClasses =
+      "border-cyan-400/80 bg-cyan-500/15 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.45)]";
+  }
+
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/90 p-2.5">
-      <div className="mt-0.5 flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-slate-900">
-        <Image
-          src={icon}
-          alt={`${label} tier icon`}
-          width={32}
-          height={32}
-          className="object-contain p-1"
-        />
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-white">{label}</p>
-          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400">
-            {count} total
-          </span>
-        </div>
-        <p className="mt-0.5 text-[11px] leading-snug text-slate-400">
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/95 p-2.5">
+      <div className="flex items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${pillClasses}`}
+        >
+          <Star className="h-3 w-3" />
+          {label.toUpperCase()}
+        </span>
+        <span className="text-[11px] text-slate-400">
           {description}
-        </p>
+        </span>
       </div>
+      <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400">
+        {count} total
+      </span>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// SORT DROPDOWN
-// ---------------------------------------------------------------------------
-function SortDropdown({ sortBy, setSortBy }) {
+function SortChip({ sortMode, setSortMode }) {
   const [open, setOpen] = useState(false);
 
-  const activeOption = SORT_OPTIONS.find((opt) => opt.id === sortBy);
+  const active = SORT_MODES.find((s) => s.id === sortMode);
 
   return (
-    <div className="relative">
+    <div className="relative text-xs">
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] text-slate-300 hover:bg-slate-900"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-300 hover:bg-slate-900"
       >
         <span className="text-slate-500">Sort:</span>
-        <span className="font-medium text-slate-200">
-          {activeOption?.label ?? "Recommended"}
+        <span className="font-medium text-slate-100">
+          {active?.label ?? "Recommended"}
         </span>
         <ChevronDown
-          className={`h-3 w-3 transition ${
+          className={`h-3 w-3 text-slate-400 transition ${
             open ? "rotate-180" : "rotate-0"
           }`}
         />
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-56 rounded-xl border border-slate-800 bg-slate-950/95 p-1 text-xs text-slate-200 shadow-xl backdrop-blur">
-          {SORT_OPTIONS.map((opt) => {
-            const isActive = opt.id === sortBy;
+        <div className="absolute right-0 z-30 mt-1 w-52 rounded-xl border border-slate-800 bg-slate-950/95 p-1 text-xs text-slate-200 shadow-xl backdrop-blur">
+          {SORT_MODES.map((mode) => {
+            const isActive = mode.id === sortMode;
             return (
               <button
-                key={opt.id}
+                key={mode.id}
                 onClick={() => {
-                  setSortBy(opt.id);
+                  setSortMode(mode.id);
                   setOpen(false);
                 }}
                 className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition ${
@@ -835,8 +826,8 @@ function SortDropdown({ sortBy, setSortBy }) {
                     : "hover:bg-slate-900"
                 }`}
               >
-                <span>{opt.label}</span>
-                {isActive && <Check className="h-3.5 w-3.5" />}
+                <span>{mode.label}</span>
+                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
               </button>
             );
           })}
@@ -846,129 +837,7 @@ function SortDropdown({ sortBy, setSortBy }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// ROLE FILTER DROPDOWN – Discord-style with colors + checkmarks
-// ---------------------------------------------------------------------------
-function RoleFilterDropdown({
-  allRoles,
-  selectedRoleIds,
-  setSelectedRoleIds,
-  open,
-  setOpen,
-}) {
-  const selectedRoles = allRoles.filter((r) => selectedRoleIds.includes(r.id));
-
-  function toggleRole(roleId) {
-    if (selectedRoleIds.includes(roleId)) {
-      const next = selectedRoleIds.filter((id) => id !== roleId);
-      setSelectedRoleIds(next);
-    } else {
-      setSelectedRoleIds([...selectedRoleIds, roleId]);
-    }
-  }
-
-  function clearRoles() {
-    setSelectedRoleIds([]);
-  }
-
-  function selectEveryoneOnly() {
-    const everyone = allRoles.find((r) => r.isDefault);
-    if (everyone) {
-      setSelectedRoleIds([everyone.id]);
-    }
-  }
-
-  const label =
-    selectedRoles.length === 0
-      ? "No role filter"
-      : selectedRoles.length === 1
-      ? selectedRoles[0].name
-      : `${selectedRoles[0].name} +${selectedRoles.length - 1}`;
-
-  return (
-    <div className="relative inline-block text-xs">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] text-slate-200 hover:bg-slate-900"
-      >
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-        <span>{label}</span>
-        <ChevronDown
-          className={`h-3 w-3 text-slate-400 transition ${
-            open ? "rotate-180" : "rotate-0"
-          }`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute z-30 mt-1 w-64 rounded-xl border border-slate-800 bg-slate-950/95 p-1 text-xs text-slate-200 shadow-xl backdrop-blur">
-          {/* Top controls */}
-          <div className="mb-1 flex items-center justify-between px-1 pb-1 text-[10px] text-slate-500">
-            <span className="uppercase tracking-wide">Filter by role</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={selectEveryoneOnly}
-                className="rounded-md px-1 py-0.5 hover:bg-slate-900"
-              >
-                Everyone
-              </button>
-              <span className="text-slate-700">•</span>
-              <button
-                onClick={clearRoles}
-                className="rounded-md px-1 py-0.5 hover:bg-slate-900"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-
-          {/* Role list */}
-          <div className="max-h-52 overflow-y-auto rounded-lg border border-slate-800/70 bg-slate-950/90">
-            {allRoles.map((role) => {
-              const isSelected = selectedRoleIds.includes(role.id);
-              return (
-                <button
-                  key={role.id}
-                  onClick={() => toggleRole(role.id)}
-                  className={`flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-xs transition ${
-                    isSelected
-                      ? "bg-emerald-500/10 text-emerald-200"
-                      : "hover:bg-slate-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: role.color || "#80848e" }}
-                    />
-                    <span>{role.name}</span>
-                    {role.isDefault && (
-                      <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[9px] text-slate-400">
-                        @everyone
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && <Check className="h-3 w-3" />}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Footer hint */}
-          <div className="mt-1 px-1 pb-1 pt-1 text-[10px] text-slate-500">
-            <p>Members must have at least one selected role to see it.</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// FILTER TOGGLE – Discord-style switch (label left, switch right)
-// ---------------------------------------------------------------------------
-function FilterToggle({ label, description, enabled, onChange }) {
+function ToggleRow({ label, description, enabled, onChange }) {
   return (
     <button
       type="button"
@@ -978,7 +847,9 @@ function FilterToggle({ label, description, enabled, onChange }) {
       <div className="flex-1">
         <p className="font-medium text-slate-100">{label}</p>
         {description && (
-          <p className="mt-0.5 text-[10px] text-slate-500">{description}</p>
+          <p className="mt-0.5 text-[10px] text-slate-500">
+            {description}
+          </p>
         )}
       </div>
       <Switch enabled={enabled} />
@@ -1006,74 +877,89 @@ function Switch({ enabled }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// ACHIEVEMENT CARD
-// ---------------------------------------------------------------------------
+function EmptyState({ onReset }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/80 px-4 py-10 text-center">
+      <p className="text-sm font-medium text-slate-200">
+        No achievements match your filters.
+      </p>
+      <p className="text-xs text-slate-400">
+        Try switching category, removing filters, or showing all achievements.
+      </p>
+      <button
+        onClick={onReset}
+        className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
+      >
+        <X className="h-3 w-3" />
+        <span>Reset filters</span>
+      </button>
+    </div>
+  );
+}
+
 function AchievementCard({
   achievement,
-  showProgressBars,
-  highlightHighTier,
-  allRoles,
+  showProgress,
+  showRarity,
+  showTierBadges,
+  compact,
 }) {
   const pct = Math.min(
     100,
     Math.round((achievement.progress / Math.max(achievement.goal, 1)) * 100)
   );
 
-  const isHighTier =
-    highlightHighTier &&
-    (achievement.tier === "gold" || achievement.tier === "diamond");
-
-  let tierStyles = "";
-  switch (achievement.tier) {
-    case "bronze":
-      tierStyles =
-        "border-amber-600/60 bg-amber-900/20 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.15)]";
-      break;
-    case "silver":
-      tierStyles =
-        "border-slate-400/70 bg-slate-700/30 text-slate-100 shadow-[0_0_12px_rgba(148,163,184,0.15)]";
-      break;
-    case "gold":
-      tierStyles =
-        "border-yellow-400/80 bg-yellow-500/15 text-yellow-200 shadow-[0_0_14px_rgba(250,204,21,0.28)]";
-      break;
-    case "diamond":
-      tierStyles =
-        "border-cyan-400/80 bg-cyan-500/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.35)]";
-      break;
-    default:
-      tierStyles =
-        "border-slate-700 bg-slate-900 text-slate-100 shadow-[0_0_8px_rgba(15,23,42,0.7)]";
-      break;
+  // Tier badge style
+  let tierClasses = "";
+  if (achievement.tier === "bronze") {
+    tierClasses =
+      "border-amber-500/60 bg-amber-500/10 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.35)]";
+  } else if (achievement.tier === "silver") {
+    tierClasses =
+      "border-slate-400/70 bg-slate-600/25 text-slate-50 shadow-[0_0_10px_rgba(148,163,184,0.35)]";
+  } else if (achievement.tier === "gold") {
+    tierClasses =
+      "border-yellow-400/80 bg-yellow-500/15 text-yellow-100 shadow-[0_0_12px_rgba(250,204,21,0.5)]";
+  } else if (achievement.tier === "diamond") {
+    tierClasses =
+      "border-cyan-400/80 bg-cyan-500/15 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.55)]";
+  } else {
+    tierClasses =
+      "border-slate-700 bg-slate-900 text-slate-100 shadow-[0_0_8px_rgba(15,23,42,0.7)]";
   }
 
-  const rarityLabel =
-    achievement.rarity <= 0.01
-      ? "Mythic"
-      : achievement.rarity <= 0.05
-      ? "Ultra Rare"
-      : achievement.rarity <= 0.15
-      ? "Rare"
-      : achievement.rarity <= 0.3
-      ? "Uncommon"
-      : "Common";
+  // Rarity label
+  let rarityLabel = "Common";
+  if (achievement.rarity <= 0.02) {
+    rarityLabel = "Mythic";
+  } else if (achievement.rarity <= 0.05) {
+    rarityLabel = "Ultra Rare";
+  } else if (achievement.rarity <= 0.15) {
+    rarityLabel = "Rare";
+  } else if (achievement.rarity <= 0.3) {
+    rarityLabel = "Uncommon";
+  } else {
+    rarityLabel = "Common";
+  }
 
-  const rarityColor =
-    achievement.rarity <= 0.01
-      ? "text-fuchsia-300"
-      : achievement.rarity <= 0.05
-      ? "text-cyan-300"
-      : achievement.rarity <= 0.15
-      ? "text-indigo-300"
-      : "text-slate-400";
-
-  const roleChips = achievement.roles
-    .map((id) => allRoles.find((r) => r.id === id))
-    .filter(Boolean);
+  let rarityColor = "text-slate-400";
+  if (rarityLabel === "Mythic") {
+    rarityColor = "text-fuchsia-300";
+  } else if (rarityLabel === "Ultra Rare") {
+    rarityColor = "text-cyan-300";
+  } else if (rarityLabel === "Rare") {
+    rarityColor = "text-indigo-300";
+  } else if (rarityLabel === "Uncommon") {
+    rarityColor = "text-emerald-300";
+  }
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-slate-800 bg-slate-950/90 p-3">
+    <div
+      className={[
+        "flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/95",
+        compact ? "p-2.5" : "p-3",
+      ].join(" ")}
+    >
       {/* title row */}
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -1091,43 +977,34 @@ function AchievementCard({
             {achievement.description}
           </p>
         </div>
-        <span
-          className={[
-            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-            tierStyles,
-            isHighTier ? "scale-[1.02]" : "",
-          ].join(" ")}
-        >
-          {achievement.tier.toUpperCase()}
-        </span>
+
+        {showTierBadges && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tierClasses}`}
+          >
+            <Star className="h-3 w-3" />
+            {achievement.tier.toUpperCase()}
+          </span>
+        )}
       </div>
 
-      {/* rarity + roles row */}
-      <div className="flex flex-wrap items-center justify-between gap-1">
-        <div className="flex items-center gap-2 text-[10px] text-slate-500">
-          <span className={rarityColor}>{rarityLabel}</span>
-          <span className="h-0.5 w-4 rounded-full bg-slate-700" />
-          <span>
-            {Math.round((1 - achievement.rarity) * 100)}% of members don&apos;t
-            have this yet
-          </span>
-        </div>
-        {roleChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1">
-            {roleChips.map((role) => (
-              <span
-                key={role.id}
-                className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-200"
-              >
-                <span
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: role.color || "#80848e" }}
-                />
-                <span>{role.name}</span>
+      {/* rarity + category row */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+        <div className="flex items-center gap-2">
+          {showRarity && (
+            <>
+              <span className={rarityColor}>{rarityLabel}</span>
+              <span className="h-0.5 w-4 rounded-full bg-slate-700" />
+              <span className="text-slate-400">
+                {(100 - Math.round(achievement.rarity * 100))}% of members
+                don&apos;t have this yet
               </span>
-            ))}
-          </div>
-        )}
+            </>
+          )}
+        </div>
+        <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-400">
+          {labelForCategory(achievement.category)}
+        </span>
       </div>
 
       {/* progress row */}
@@ -1145,13 +1022,13 @@ function AchievementCard({
             {pct}%
           </span>
         </div>
-        {showProgressBars && (
+        {showProgress && (
           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
             <div
               className={[
                 "h-full rounded-full transition-all",
                 achievement.earned ? "bg-emerald-500" : "bg-sky-500",
-                pct >= 100 ? "shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "",
+                pct >= 100 ? "shadow-[0_0_8px_rgba(16,185,129,0.7)]" : "",
               ].join(" ")}
               style={{ width: `${pct}%` }}
             />
@@ -1159,26 +1036,23 @@ function AchievementCard({
         )}
       </div>
 
-      {/* footer badges */}
+      {/* footer row */}
       <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[10px]">
         <div className="flex flex-wrap items-center gap-1">
           {achievement.earned ? (
             <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">
-              <Check className="h-3 w-3" />
-              <span>Unlocked</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>Completed</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-1.5 py-0.5 text-slate-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
               <span>Locked</span>
             </span>
           )}
-          <span className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-1.5 py-0.5 text-slate-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
-            <span>{labelForCategory(achievement.category)}</span>
-          </span>
         </div>
         <button className="rounded-lg bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-400 hover:bg-slate-800">
-          View unlock rules
+          View unlock conditions
         </button>
       </div>
     </div>
