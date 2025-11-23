@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// NEW inputs
+// Selectors
 import RoleMultiSelect from "@/components/moderation/RoleMultiSelect";
 import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
@@ -27,6 +27,10 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
 
+  // REAL FIX: track loading state
+  const [loadingRoles, setLoadingRoles] = useState(true);
+  const [loadingChannels, setLoadingChannels] = useState(true);
+
   // ================================
   // FETCH ROLES + CHANNELS
   // ================================
@@ -35,6 +39,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
       try {
         const res = await fetch(`/api/discord/guild/${guildId}/roles`);
         const json = await res.json();
+
         if (json.roles) {
           const sorted = json.roles.sort((a, b) => b.position - a.position);
           setRoles(sorted);
@@ -42,36 +47,44 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
       } catch (e) {
         console.error("Failed loading roles:", e);
       }
+
+      setLoadingRoles(false);
     }
 
     async function loadChannels() {
       try {
         const res = await fetch(`/api/discord/guild/${guildId}/channels`);
         const json = await res.json();
+
         if (json.channels) setChannels(json.channels);
       } catch (e) {
         console.error("Failed loading channels:", e);
       }
+
+      setLoadingChannels(false);
     }
 
     loadRoles();
     loadChannels();
   }, [guildId]);
 
-  // Loading state
-  if (!roles.length || !channels.length)
+  // ================================
+  // FIXED LOADING SCREEN
+  // ================================
+  if (loadingRoles || loadingChannels)
     return (
       <p className="text-slate-300 text-sm animate-pulse">
         Loading permissions…
       </p>
     );
 
+  // ================================
+  // UI
+  // ================================
   return (
     <div className="flex flex-col gap-8 pb-20">
 
-      {/* ============================== */}
       {/* HEADER */}
-      {/* ============================== */}
       <div className="flex items-start justify-between">
         <div>
           <Link
@@ -81,7 +94,9 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             ← Back to AutoMod
           </Link>
 
-          <h1 className="mt-2 text-xl font-semibold text-slate-100">{title}</h1>
+          <h1 className="mt-2 text-xl font-semibold text-slate-100">
+            {title}
+          </h1>
           <p className="text-xs text-slate-400">{description}</p>
         </div>
 
@@ -95,9 +110,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* ============================== */}
       {/* PERMISSIONS CARD */}
-      {/* ============================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-8">
         <h2 className="font-semibold text-slate-200">Permissions</h2>
 
@@ -144,23 +157,18 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </section>
 
-      {/* ============================== */}
       {/* EXTRA SETTINGS */}
-      {/* ============================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
         {extraFields}
       </section>
 
-      {/* ============================== */}
       {/* DEMO */}
-      {/* ============================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
         <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
         <p className="text-sm text-slate-400">{demoTitle}</p>
 
-        {/* EXACT MATCH */}
         <div>
           <p className="text-xs text-slate-400 mb-1">Exact match</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
@@ -171,7 +179,6 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           </div>
         </div>
 
-        {/* MATCH ANY */}
         <div>
           <p className="text-xs text-slate-400 mb-1">Match any part</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
