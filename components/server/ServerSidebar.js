@@ -21,7 +21,9 @@ const sidebarSections = [
   {
     title: "Utilities",
     items: [
-      { label: "Ticket Embeds", icon: "🎫", id: "ticket-embeds" },
+      // UPDATED → Ticketing now uses correct route
+      { label: "Ticketing", icon: "🎫", id: "ticketing" },
+
       { label: "Temp Channels", icon: "📢", id: "temp-channels" },
       { label: "Embed Messages", icon: "📝", id: "embed-messages" },
       { label: "Polls", icon: "📊", id: "polls" },
@@ -119,7 +121,7 @@ export default function ServerSidebar({ guildId }) {
         ))}
       </nav>
 
-      {/* Small fade at bottom (now confined to the sidebar only) */}
+      {/* Small fade at bottom */}
       <div className="pointer-events-none absolute bottom-0 left-0 h-10 w-full bg-gradient-to-t from-slate-950 to-transparent" />
     </aside>
   );
