@@ -3,142 +3,103 @@
 import { useState, useMemo } from "react";
 import { X, Hash, Volume2, FolderIcon } from "lucide-react";
 
-export default function ChannelMultiSelect({
-  channels = [],
-  values = [],
-  onChange,
-}) {
+export default function ChannelMultiSelect({ channels = [], values, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Remove selected channels from the dropdown
+  // Apply search
   const filtered = useMemo(() => {
-    const selectedIds = new Set(values.map((c) => c.id));
-
-    return channels.filter(
-      (c) =>
-        !selectedIds.has(c.id) &&
-        c.name.toLowerCase().includes(query.toLowerCase())
+    return channels.filter((c) =>
+      c.name.toLowerCase().includes(query.toLowerCase())
     );
-  }, [channels, values, query]);
+  }, [channels, query]);
 
-  function addChannel(ch) {
-    onChange([...values, ch]);
+  function toggleChannel(ch) {
+    if (values.some((v) => v.id === ch.id)) {
+      onChange(values.filter((v) => v.id !== ch.id));
+    } else {
+      onChange([...values, ch]);
+    }
   }
 
-  function removeChannel(id) {
-    onChange(values.filter((c) => c.id !== id));
+  function remove(id) {
+    onChange(values.filter((v) => v.id !== id));
   }
 
-  const iconFor = (type) => {
+  function iconFor(type) {
     if (type === 2) return <Volume2 size={14} className="text-blue-300" />;
     if (type === 4) return <FolderIcon size={14} className="text-yellow-300" />;
     return <Hash size={14} className="text-slate-300" />;
-  };
+  }
 
   return (
-    <div className="relative w-full">
-      {/* Selected Channels */}
+    <div className="relative">
+      {/* Selected badges */}
       <div
-        onClick={() => setOpen(true)}
-        className="min-h-[44px] flex items-center flex-wrap gap-2 px-3 py-2 bg-slate-800/70 border border-slate-700 rounded-lg cursor-text"
+        className="min-h-[42px] bg-slate-800/70 border border-slate-700 rounded-lg px-3 py-2 flex items-center gap-2 flex-wrap cursor-pointer"
+        onClick={() => setOpen(!open)}
       >
-        {values.length === 0 && (
-          <span className="text-slate-500 text-sm">Select channels…</span>
-        )}
-
-        {values.map((ch) => (
-          <span
-            key={ch.id}
-            className="flex items-center gap-2 bg-slate-700 text-slate-200 px-2 py-[3px] rounded-md text-xs"
-          >
-            {iconFor(ch.type)} #{ch.name}
-
-            <button
-              className="text-slate-400 hover:text-red-400"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeChannel(ch.id);
-              }}
+        {values.length === 0 ? (
+          <span className="text-slate-400 text-sm">Select channels...</span>
+        ) : (
+          values.map((ch) => (
+            <span
+              key={ch.id}
+              className="px-2 py-[2px] text-xs bg-slate-700 rounded flex items-center gap-1"
             >
-              <X size={12} />
-            </button>
-          </span>
-        ))}
+              {iconFor(ch.type)}
+              #{ch.name}
+              <X
+                size={12}
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  remove(ch.id);
+                }}
+              />
+            </span>
+          ))
+        )}
       </div>
 
-      {/* DROPDOWN */}
       {open && (
-        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg max-h-80 overflow-y-auto shadow-xl">
-          {/* Search bar */}
+        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
+          {/* SEARCH BAR */}
           <div className="p-2 border-b border-slate-800">
             <input
-              autoFocus
-              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500 outline-none"
+              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
               placeholder="Search channels..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
 
-          {/* Grouped lists */}
-          <DropdownSection
-            title="TEXT CHANNELS"
-            list={filtered.filter((c) => c.type === 0)}
-            iconFor={iconFor}
-            onSelect={addChannel}
-          />
-
-          <DropdownSection
-            title="VOICE CHANNELS"
-            list={filtered.filter((c) => c.type === 2)}
-            iconFor={iconFor}
-            onSelect={addChannel}
-          />
-
-          <DropdownSection
-            title="CATEGORIES"
-            list={filtered.filter((c) => c.type === 4)}
-            iconFor={iconFor}
-            onSelect={addChannel}
-          />
-
-          <DropdownSection
-            title="OTHER"
-            list={filtered.filter(
-              (c) => ![0, 2, 4].includes(c.type)
-            )}
-            iconFor={iconFor}
-            onSelect={addChannel}
-          />
-
+          {/* NO RESULTS */}
           {filtered.length === 0 && (
             <p className="text-center text-sm text-slate-500 py-3">
               No channels found
             </p>
           )}
+
+          {/* CHANNEL LIST */}
+          {filtered.map((ch) => {
+            const active = values.some((v) => v.id === ch.id);
+
+            return (
+              <button
+                type="button"
+                key={ch.id}
+                onClick={() => toggleChannel(ch)}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-800
+                  ${active ? "text-indigo-400" : "text-slate-200"}
+                `}
+              >
+                {iconFor(ch.type)} #{ch.name}
+              </button>
+            );
+          })}
         </div>
       )}
-    </div>
-  );
-}
-
-function DropdownSection({ title, list, iconFor, onSelect }) {
-  if (!list || list.length === 0) return null;
-
-  return (
-    <div className="p-2">
-      <p className="text-xs text-slate-500 mb-1 px-1">{title}</p>
-
-      {list.map((ch) => (
-        <button
-          key={ch.id}
-          className="w-full text-left px-3 py-2 flex items-center gap-2 rounded-md text-sm text-slate-200 hover:bg-slate-800"
-          onClick={() => onSelect(ch)}
-        >
-          {iconFor(ch.type)} #{ch.name}
-        </button>
-      ))}
     </div>
   );
 }
