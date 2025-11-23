@@ -1,49 +1,30 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { X, Hash, Volume2, FolderIcon } from "lucide-react";
+import { ChevronDown, X, Hash, Volume2, FolderIcon } from "lucide-react";
 
-export default function ChannelMultiSelect({ channels = [], values = [], onChange }) {
+export default function ChannelMultiSelect({ channels = [], values, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Filter out selected channels + apply search
+  // Filter out selected channels
   const filtered = useMemo(() => {
-    const selectedIds = new Set(values.map((c) => c.id));
-
-    const remaining = channels.filter((c) => !selectedIds.has(c.id));
-
-    return remaining.filter((c) =>
-      c.name.toLowerCase().includes(query.toLowerCase())
+    return channels.filter(
+      (ch) =>
+        !values.some((v) => v.id === ch.id) &&
+        ch.name.toLowerCase().includes(query.toLowerCase())
     );
   }, [channels, values, query]);
 
-  // Group channels
-  const grouped = useMemo(() => {
-    const groups = {
-      text: [],
-      voice: [],
-      categories: [],
-      other: [],
-    };
-
-    filtered.forEach((ch) => {
-      if (ch.type === 0) groups.text.push(ch);
-      else if (ch.type === 2) groups.voice.push(ch);
-      else if (ch.type === 4) groups.categories.push(ch);
-      else groups.other.push(ch);
-    });
-
-    return groups;
-  }, [filtered]);
-
-  const addChannel = (ch) => {
+  function addChannel(ch) {
     onChange([...values, ch]);
-  };
+    setQuery("");
+    setOpen(false); // 🔥 Auto-close after selecting
+  }
 
-  const removeChannel = (id) => {
-    onChange(values.filter((ch) => ch.id !== id));
-  };
+  function removeChannel(id) {
+    onChange(values.filter((c) => c.id !== id));
+  }
 
   const iconFor = (type) => {
     if (type === 2) return <Volume2 size={14} className="text-blue-300" />;
@@ -53,79 +34,73 @@ export default function ChannelMultiSelect({ channels = [], values = [], onChang
 
   return (
     <div className="relative w-full">
-      {/* Selected Items */}
+      {/* Selected channel pills */}
       <div
-        onClick={() => setOpen(true)}
-        className="min-h-[44px] bg-slate-800/70 border border-slate-700 rounded-lg p-2 flex flex-wrap gap-2 cursor-pointer hover:bg-slate-700/60 transition"
+        className="w-full bg-slate-800/70 border border-slate-700 rounded-lg px-3 py-2 flex flex-wrap gap-2 cursor-pointer"
+        onClick={() => setOpen((prev) => !prev)}
       >
-        {values.length === 0 && (
-          <span className="text-slate-400 text-sm pl-1">Select channels…</span>
+        {values.length === 0 ? (
+          <span className="text-slate-400 text-sm">Select channels…</span>
+        ) : (
+          values.map((ch) => (
+            <div
+              key={ch.id}
+              className="flex items-center gap-2 bg-slate-700/70 text-slate-200 text-xs px-2 py-1 rounded-md"
+            >
+              #{ch.name}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeChannel(ch.id);
+                }}
+              >
+                <X size={12} className="text-slate-400 hover:text-red-400" />
+              </button>
+            </div>
+          ))
         )}
 
-        {values.map((ch) => (
-          <div
-            key={ch.id}
-            className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded-lg text-sm text-slate-200"
-          >
-            {iconFor(ch.type)}
-            {ch.name}
-            <button onClick={() => removeChannel(ch.id)}>
-              <X size={14} className="text-slate-400 hover:text-red-400" />
-            </button>
-          </div>
-        ))}
+        <ChevronDown size={16} className="ml-auto text-slate-400" />
       </div>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
-          {/* Search */}
+        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-72 overflow-y-auto">
+          {/* Search bar */}
           <div className="p-2 border-b border-slate-800">
             <input
               className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
               placeholder="Search channels..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              autoFocus
             />
           </div>
 
-          {/* Channel Sections */}
-          <DropdownSection
+          {/* List */}
+          <DropdownGroup
             title="TEXT CHANNELS"
-            list={grouped.text}
             iconFor={iconFor}
+            list={filtered.filter((c) => c.type === 0)}
             onSelect={addChannel}
-            disabled={false}
           />
 
-          <DropdownSection
+          <DropdownGroup
             title="VOICE CHANNELS"
-            list={grouped.voice}
             iconFor={iconFor}
+            list={filtered.filter((c) => c.type === 2)}
             onSelect={addChannel}
-            disabled={false}
           />
 
-          <DropdownSection
+          <DropdownGroup
             title="CATEGORIES"
-            list={grouped.categories}
             iconFor={iconFor}
-            onSelect={addChannel}
-            disabled={true} // categories disabled
-          />
-
-          <DropdownSection
-            title="OTHER"
-            list={grouped.other}
-            iconFor={iconFor}
-            onSelect={addChannel}
-            disabled={false}
+            list={filtered.filter((c) => c.type === 4)}
+            disabled
           />
 
           {filtered.length === 0 && (
-            <p className="text-center text-sm text-slate-500 py-3">
-              No channels found
-            </p>
+            <p className="text-center text-sm text-slate-600 py-2">No channels found</p>
           )}
         </div>
       )}
@@ -133,9 +108,7 @@ export default function ChannelMultiSelect({ channels = [], values = [], onChang
   );
 }
 
-/* SECTION COMPONENT --------------------------------------------------- */
-
-function DropdownSection({ title, list, iconFor, onSelect, disabled }) {
+function DropdownGroup({ title, list, iconFor, onSelect, disabled }) {
   if (!list || list.length === 0) return null;
 
   return (
@@ -164,7 +137,6 @@ function DropdownSection({ title, list, iconFor, onSelect, disabled }) {
         return (
           <button
             key={ch.id}
-            type="button"
             onClick={() => onSelect(ch)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left rounded-md text-sm text-slate-200 hover:bg-slate-800"
           >
