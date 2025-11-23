@@ -10,44 +10,44 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
   const containerRef = useRef(null);
   const listRef = useRef(null);
 
-  // Close when clicking outside
+  // Close on outside click
   useEffect(() => {
-    function handleClick(e) {
+    function handle(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
   }, []);
 
-  // Sort roles similar to Discord (highest position first)
+  // Sort roles Discord-style (highest first)
   const sortedRoles = [...roles].sort((a, b) => {
-    if (typeof a.position === "number" && typeof b.position === "number") {
+    if (typeof a.position === "number" && typeof b.position === "number")
       return b.position - a.position;
-    }
     return a.name.localeCompare(b.name);
   });
 
-  // Filter + drop @everyone from UI
+  // Hide @everyone + hide already selected
   const filtered = sortedRoles.filter(
     (r) =>
       r.name !== "@everyone" &&
+      !value.includes(r.id) && // ⬅️ NEW: selected roles removed from list
       r.name.toLowerCase().includes(query.toLowerCase())
   );
 
-  // Keep highlighted index in range
+  // Keep highlight in range
   useEffect(() => {
     if (highlightedIndex >= filtered.length) {
       setHighlightedIndex(filtered.length > 0 ? filtered.length - 1 : 0);
     }
   }, [filtered.length, highlightedIndex]);
 
-  const toggleRole = (roleId) => {
-    if (value.includes(roleId)) {
-      onChange(value.filter((x) => x !== roleId));
+  const toggleRole = (id) => {
+    if (value.includes(id)) {
+      onChange(value.filter((x) => x !== id));
     } else {
-      onChange([...value, roleId]);
+      onChange([...value, id]);
     }
   };
 
@@ -56,12 +56,15 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
     onChange([]);
   };
 
-  const scrollToHighlighted = (index) => {
+  const scrollTo = (index) => {
     if (!listRef.current) return;
     const item = listRef.current.querySelector(`[data-index="${index}"]`);
-    if (item) {
-      item.scrollIntoView({ block: "nearest" });
-    }
+    if (item) item.scrollIntoView({ block: "nearest" });
+  };
+
+  const getRoleColor = (role) => {
+    if (!role?.color) return null;
+    return `#${role.color.toString(16).padStart(6, "0")}`;
   };
 
   const handleKeyDown = (e) => {
@@ -69,25 +72,20 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
       setOpen(true);
       return;
     }
-
     if (!open) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((prev) => {
-        const next = Math.min(prev + 1, filtered.length - 1);
-        scrollToHighlighted(next);
-        return next;
-      });
+      const next = Math.min(highlightedIndex + 1, filtered.length - 1);
+      setHighlightedIndex(next);
+      scrollTo(next);
     }
 
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightedIndex((prev) => {
-        const next = Math.max(prev - 1, 0);
-        scrollToHighlighted(next);
-        return next;
-      });
+      const next = Math.max(highlightedIndex - 1, 0);
+      setHighlightedIndex(next);
+      scrollTo(next);
     }
 
     if (e.key === "Enter") {
@@ -96,23 +94,10 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
       if (role) toggleRole(role.id);
     }
 
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setOpen(false);
-    }
+    if (e.key === "Escape") setOpen(false);
 
     if (e.key === "Backspace" && query === "" && value.length > 0) {
-      e.preventDefault();
       onChange(value.slice(0, -1));
-    }
-  };
-
-  const getRoleColor = (role) => {
-    if (!role || !role.color) return null;
-    try {
-      return `#${role.color.toString(16).padStart(6, "0")}`;
-    } catch {
-      return null;
     }
   };
 
@@ -123,7 +108,7 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {/* Selection box */}
+      {/* Selected pills */}
       <div
         onClick={() => setOpen((o) => !o)}
         className="flex flex-wrap items-center gap-1 min-h-[44px] rounded-xl border border-slate-700 bg-slate-900/80 px-2 py-2 cursor-pointer hover:border-indigo-500/70 hover:bg-slate-800/90 transition"
@@ -136,20 +121,15 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
           const role = roles.find((r) => r.id === id);
           if (!role || role.name === "@everyone") return null;
 
-          const color = getRoleColor(role);
+          const col = getRoleColor(role);
 
           return (
             <span
               key={id}
               className="flex items-center gap-1 rounded-full bg-slate-800/90 px-2 py-1 text-xs text-slate-100 shadow-sm shadow-black/40"
             >
-              {color && (
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-              )}
-              <span className="max-w-[120px] truncate">{role.name}</span>
+              {col && <span style={{ backgroundColor: col }} className="h-2 w-2 rounded-full" />}
+              <span className="max-w-[140px] truncate">{role.name}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -175,9 +155,9 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 mt-2 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl shadow-black/40 z-50 animate-fadeIn">
+        <div className="absolute left-0 right-0 mt-2 rounded-xl bg-slate-950 border border-slate-800 shadow-xl shadow-black/50 z-50 animate-fadeIn">
           {/* Search */}
-          <div className="border-b border-slate-800 px-2 py-2">
+          <div className="border-b border-slate-800 p-2">
             <input
               placeholder="Search roles…"
               value={query}
@@ -185,57 +165,45 @@ export default function RoleMultiSelect({ roles = [], value = [], onChange }) {
                 setQuery(e.target.value);
                 setHighlightedIndex(0);
               }}
-              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
 
-          {/* List with scroll shadows */}
-          <div className="relative max-h-60 overflow-y-auto" ref={listRef}>
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-slate-950 to-transparent" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-slate-950 to-transparent" />
+          {/* List */}
+          <div ref={listRef} className="max-h-60 overflow-y-auto p-2 space-y-1">
+            {filtered.length === 0 && (
+              <p className="text-slate-500 text-sm p-2">No roles found.</p>
+            )}
 
-            <div className="p-2 space-y-1">
-              {filtered.length === 0 && (
-                <p className="text-slate-500 text-sm px-1 py-2">
-                  No roles found.
-                </p>
-              )}
+            {filtered.map((role, index) => {
+              const col = getRoleColor(role);
+              const highlighted = highlightedIndex === index;
 
-              {filtered.map((role, index) => {
-                const active = value.includes(role.id);
-                const highlighted = index === highlightedIndex;
-                const color = getRoleColor(role);
-
-                return (
-                  <div
-                    key={role.id}
-                    data-index={index}
-                    onClick={() => toggleRole(role.id)}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm cursor-pointer transition
-                      ${
-                        highlighted
-                          ? "bg-indigo-600/70 text-white"
-                          : "bg-slate-900 text-slate-200 hover:bg-slate-800"
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-2">
-                      {color && (
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full border border-black/40"
-                          style={{ backgroundColor: color }}
-                        />
-                      )}
-                      <span className="truncate max-w-[180px]">
-                        {role.name}
-                      </span>
-                    </div>
-                    {active && <span className="text-xs">✔</span>}
+              return (
+                <div
+                  key={role.id}
+                  data-index={index}
+                  onClick={() => toggleRole(role.id)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  className={`flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer transition
+                    ${
+                      highlighted
+                        ? "bg-indigo-600/70 text-white"
+                        : "bg-slate-900 text-slate-200 hover:bg-slate-800"
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {col && (
+                      <span
+                        className="h-2.5 w-2.5 rounded-full border border-black/40"
+                        style={{ backgroundColor: col }}
+                      />
+                    )}
+                    <span>{role.name}</span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
