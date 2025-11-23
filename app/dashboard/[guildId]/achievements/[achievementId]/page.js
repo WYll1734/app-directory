@@ -6,15 +6,20 @@ import Image from "next/image";
 import { ChevronLeft, ChevronDown } from "lucide-react";
 import AchievementsTabs from "@/components/achievements/AchievementsTabs";
 
-// Icon paths in /public
+// ---------------------------------------------------------------------------
+// ICONS – match EXACTLY what you have in /public
+// ---------------------------------------------------------------------------
+// If you later move them into /public/achievements, just change these paths.
 const tierIcons = {
-  bronze: "/achievements/bronze.png",
-  silver: "/achievements/silver.png",
-  gold: "/achievements/gold.png",
-  diamond: "/achievements/diamond.png",
+  bronze: "/Bronze.png",
+  silver: "/Silver.png",
+  gold: "/gold.png",       // your screenshot shows lowercase "gold.png"
+  diamond: "/Diamond.png",
 };
 
-// Fake DB for now
+// ---------------------------------------------------------------------------
+// Fake data (no real DB yet)
+// ---------------------------------------------------------------------------
 const ACHIEVEMENT_MAP = {
   "king-of-spam": {
     id: "king-of-spam",
@@ -87,6 +92,9 @@ const DEFAULT_TIERS = {
 
 const tierOrder = ["bronze", "silver", "gold", "diamond"];
 
+// ---------------------------------------------------------------------------
+// Small UI helpers
+// ---------------------------------------------------------------------------
 function Toggle({ checked, onChange }) {
   return (
     <label className="relative inline-flex cursor-pointer items-center shrink-0">
@@ -126,8 +134,8 @@ function SaveButton({ state, onClick }) {
 }
 
 /**
- * Simple role dropdown (styled like your other dropdowns)
- * props: { value, onChange, roles, loading }
+ * Simple role dropdown (placeholder for now, roles are fetched from your roles
+ * API but not persisted anywhere yet).
  */
 function RewardRoleDropdown({ value, onChange, roles, loading }) {
   const [open, setOpen] = useState(false);
@@ -153,7 +161,9 @@ function RewardRoleDropdown({ value, onChange, roles, loading }) {
         className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-left text-xs text-slate-200 flex items-center justify-between"
       >
         <span className="truncate">{selectedLabel}</span>
-        <span className="text-slate-400 text-[10px] ml-2">{open ? "▴" : "▾"}</span>
+        <span className="text-slate-400 text-[10px] ml-2">
+          {open ? "▴" : "▾"}
+        </span>
       </button>
 
       {open && (
@@ -197,6 +207,9 @@ function RewardRoleDropdown({ value, onChange, roles, loading }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 export default function AchievementEditorPage({ params }) {
   const { guildId, achievementId } = params;
 
@@ -257,10 +270,11 @@ export default function AchievementEditorPage({ params }) {
   const handleSave = () => {
     setSaveState("saving");
     setTimeout(() => {
-      // TODO: hook to DB/API
+      // later: hook this up to your real DB / API
       console.log("Saving achievement config:", {
         id: achievementId,
         name,
+        description,
         tiers,
         dontTrackPast,
         deadlineEnabled,
@@ -274,7 +288,10 @@ export default function AchievementEditorPage({ params }) {
   };
 
   const handleDelete = () => {
-    if (typeof window !== "undefined" && window.confirm("Delete this achievement?")) {
+    if (
+      typeof window !== "undefined" &&
+      window.confirm("Delete this achievement?")
+    ) {
       console.log("Delete achievement", achievementId);
       // later: redirect back to overview
     }
@@ -302,7 +319,7 @@ export default function AchievementEditorPage({ params }) {
           </Link>
 
           <div className="flex items-center gap-4">
-            {/* Big icon in header */}
+            {/* Big icon in header (use bronze as base) */}
             <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-slate-800 shadow-md shadow-amber-500/20">
               <Image
                 src={tierIcons.bronze}
@@ -322,7 +339,8 @@ export default function AchievementEditorPage({ params }) {
                 <span className="text-xs text-slate-500">✏️</span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Configure this achievement&apos;s progress, action and trophy tiers.
+                Configure this achievement&apos;s progress, action and trophy
+                tiers.
               </p>
             </div>
           </div>
@@ -346,7 +364,7 @@ export default function AchievementEditorPage({ params }) {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs (3 tabs – Achievements / Configuration / Commands) */}
       <AchievementsTabs guildId={guildId} activeTab="achievements" />
 
       {/* Body */}
@@ -355,7 +373,9 @@ export default function AchievementEditorPage({ params }) {
         <div className="space-y-6">
           {/* Achievement progress */}
           <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-100">Achievement progress</h3>
+            <h3 className="text-sm font-semibold text-slate-100">
+              Achievement progress
+            </h3>
             <p className="text-xs text-slate-400">
               Check how many members unlocked this achievement.
             </p>
@@ -382,7 +402,9 @@ export default function AchievementEditorPage({ params }) {
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100"
                 defaultValue="messages"
               >
-                <option value="messages">Member sends &#123;count&#125; messages</option>
+                <option value="messages">
+                  Member sends &#123;count&#125; messages
+                </option>
                 <option value="reactions">
                   Member reacts to &#123;count&#125; messages
                 </option>
@@ -403,8 +425,8 @@ export default function AchievementEditorPage({ params }) {
                     Override announcement message
                   </div>
                   <div className="text-[11px] text-slate-400 max-w-md">
-                    Override the default configuration message with a custom message for
-                    this achievement.
+                    Override the default configuration message with a custom
+                    message for this achievement.
                   </div>
                 </div>
                 <Toggle
@@ -426,7 +448,9 @@ export default function AchievementEditorPage({ params }) {
 
           {/* Trophy tiers */}
           <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-100">Trophy Tiers</h3>
+            <h3 className="text-sm font-semibold text-slate-100">
+              Trophy Tiers
+            </h3>
 
             <div className="space-y-3">
               {tierOrder.map((id) => {
@@ -530,7 +554,9 @@ export default function AchievementEditorPage({ params }) {
                                 <Toggle
                                   checked={tier.removeRole}
                                   onChange={() =>
-                                    updateTier(id, { removeRole: !tier.removeRole })
+                                    updateTier(id, {
+                                      removeRole: !tier.removeRole,
+                                    })
                                   }
                                 />
                               </div>
@@ -538,7 +564,9 @@ export default function AchievementEditorPage({ params }) {
                                 <RewardRoleDropdown
                                   value={tier.removeRoleRoleId}
                                   onChange={(roleId) =>
-                                    updateTier(id, { removeRoleRoleId: roleId })
+                                    updateTier(id, {
+                                      removeRoleRoleId: roleId,
+                                    })
                                   }
                                   roles={roles}
                                   loading={rolesLoading}
@@ -603,7 +631,8 @@ export default function AchievementEditorPage({ params }) {
                 <div>
                   <div className="font-semibold">Set deadline</div>
                   <div className="text-[11px] text-slate-400">
-                    Great for seasonal events—achievement ends on your chosen date.
+                    Great for seasonal events—achievement ends on your chosen
+                    date.
                   </div>
                 </div>
                 <Toggle
@@ -614,7 +643,9 @@ export default function AchievementEditorPage({ params }) {
 
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <div className="font-semibold">Send &apos;Almost there&apos;</div>
+                  <div className="font-semibold">
+                    Send &apos;Almost there&apos;
+                  </div>
                   <div className="text-[11px] text-slate-400">
                     Notify members at 75% progress toward this achievement.
                   </div>
