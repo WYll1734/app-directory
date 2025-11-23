@@ -7,7 +7,7 @@ const tabs = [
   { id: "automod", label: "AutoMod", icon: ShieldCheck },
   { id: "admin", label: "Admin", icon: UserCog },
   { id: "audit-logging", label: "Audit Logging", icon: LogOut },
-  { id: "commands", label: "Commands", icon: ListChecks },
+  { id: "comand", label: "Commands", icon: ListChecks }, // FIXED
 ];
 
 export default function ModerationTabs({ guildId, activeTab }) {
