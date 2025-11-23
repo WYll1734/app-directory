@@ -41,6 +41,91 @@ const ACTION_OPTIONS = [
   { id: "threads", label: "Member creates [count] threads" },
 ];
 
+/**
+ * Achievement meta – matches the IDs used on the overview cards.
+ * This lets the editor know which achievement you clicked.
+ */
+const ACHIEVEMENT_META = [
+  {
+    id: "first-message",
+    name: "First Message",
+    description: "Send your very first message in the server.",
+    category: "messages",
+  },
+  {
+    id: "king-of-spam",
+    name: "King of Spam",
+    description: "Send 10,000 messages across all channels.",
+    category: "messages",
+  },
+  {
+    id: "reaction-enjoyer",
+    name: "Reaction Enjoyer",
+    description: "React to 100 messages.",
+    category: "reactions",
+  },
+  {
+    id: "reaction-master",
+    name: "Reaction Master",
+    description: "React to 500 messages in total.",
+    category: "reactions",
+  },
+  {
+    id: "voice-chatter",
+    name: "Voice Chatter",
+    description: "Spend 600 minutes in voice channels.",
+    category: "voice",
+  },
+  {
+    id: "night-owl",
+    name: "Night Owl",
+    description: "Be in voice between 1am and 4am for 5 days.",
+    category: "voice",
+  },
+  {
+    id: "server-regular",
+    name: "Server Regular",
+    description: "Be active for 30 days in a row.",
+    category: "activity",
+  },
+  {
+    id: "year-one",
+    name: "Year One",
+    description: "Stay in the server for a full year.",
+    category: "activity",
+  },
+  {
+    id: "level-10",
+    name: "Level 10",
+    description: "Reach level 10 in the leveling system.",
+    category: "levels",
+  },
+  {
+    id: "level-50",
+    name: "Level 50",
+    description: "Reach level 50 and flex on everyone.",
+    category: "levels",
+  },
+  {
+    id: "level-100",
+    name: "Level 100",
+    description: "Reach the maximum level in the server.",
+    category: "levels",
+  },
+  {
+    id: "mod-helper",
+    name: "Helper",
+    description: "Reply to 50 messages in help channels.",
+    category: "staff",
+  },
+  {
+    id: "mod-hammer",
+    name: "Ban Hammer",
+    description: "Issue 25 successful moderations (warn / mute / ban).",
+    category: "staff",
+  },
+];
+
 const fetcher = (url) => fetch(url).then((r) => r.json());
 
 export default function AchievementEditorPage({ params }) {
@@ -63,12 +148,26 @@ export default function AchievementEditorPage({ params }) {
   const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
 
   // ===================== MOCK ACHIEVEMENT =====================
-  const initialAchievement = useMemo(
-    () => ({
-      id: achievementId || "king-of-spam",
-      name: "King of Spam",
+  const initialAchievement = useMemo(() => {
+    // find the achievement that matches the URL ID
+    const meta =
+      ACHIEVEMENT_META.find((a) => a.id === achievementId) ||
+      ACHIEVEMENT_META.find((a) => a.id === "king-of-spam");
+
+    // map category -> default action type
+    let mappedAction = "messages";
+    if (meta?.category === "reactions") mappedAction = "reactions";
+    else if (meta?.category === "voice") mappedAction = "voice";
+    else if (meta?.category === "activity") mappedAction = "messages";
+    else if (meta?.category === "levels") mappedAction = "messages";
+    else if (meta?.category === "staff") mappedAction = "messages";
+
+    return {
+      id: achievementId || meta.id,
+      name: meta?.name || "Achievement",
+      description: meta?.description || "",
       serverProgress: 0,
-      actionType: "messages",
+      actionType: mappedAction,
       overrideAnnouncement: false,
       tiers: TIER_CONFIG.map((tier) => ({
         id: tier.id,
@@ -90,9 +189,8 @@ export default function AchievementEditorPage({ params }) {
         deadline: "",
         almostThere: true,
       },
-    }),
-    [achievementId]
-  );
+    };
+  }, [achievementId]);
 
   // ===================== STATE =====================
   const [name, setName] = useState(initialAchievement.name);
