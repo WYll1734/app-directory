@@ -1,6 +1,7 @@
+// app/dashboard/[guildId]/achievements/page.js
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronDown } from "lucide-react";
@@ -20,663 +21,391 @@ const tierIcons = {
 // ---------------------------------------------------------------------------
 // Fake data (no real DB yet)
 // ---------------------------------------------------------------------------
+// You can wire this up to your real DB later. For now it's just UI + mock data.
 const ACHIEVEMENT_MAP = {
   "king-of-spam": {
     id: "king-of-spam",
     name: "King of Spam",
-    description: "Send messages",
+    description: "Send a large amount of messages in your server.",
+    category: "Messages",
+    tier: "gold",
+    goal: 10000,
+    progress: 7234,
+    earned: false,
+  },
+  "first-message": {
+    id: "first-message",
+    name: "First Message",
+    description: "Send your very first message in the server.",
+    category: "Messages",
+    tier: "bronze",
+    goal: 1,
+    progress: 1,
+    earned: true,
   },
   "reaction-master": {
     id: "reaction-master",
     name: "Reaction Master",
-    description: "Add reactions to messages",
+    description: "React to messages across the server.",
+    category: "Reactions",
+    tier: "silver",
+    goal: 500,
+    progress: 120,
+    earned: false,
   },
-  "stay-awhile": {
-    id: "stay-awhile",
-    name: "Stay Awhile and Listen",
-    description: "Spend minutes in voice channels",
+  "voice-chatter": {
+    id: "voice-chatter",
+    name: "Voice Chatter",
+    description: "Spend time in voice channels.",
+    category: "Voice",
+    tier: "silver",
+    goal: 600, // minutes
+    progress: 340,
+    earned: false,
   },
-  "thread-creator": {
-    id: "thread-creator",
-    name: "Thread Creator",
-    description: "Create threads",
+  "server-regular": {
+    id: "server-regular",
+    name: "Server Regular",
+    description: "Be active for 30 days in a row.",
+    category: "Activity",
+    tier: "gold",
+    goal: 30,
+    progress: 19,
+    earned: false,
   },
-};
-
-const DEFAULT_TIERS = {
-  bronze: {
-    id: "bronze",
-    name: "Bronze",
-    count: 20,
-    giveRole: false,
-    giveRoleRoleId: null,
-    removeRole: false,
-    removeRoleRoleId: null,
-    giveXP: false,
-    giveCoins: false,
-  },
-  silver: {
-    id: "silver",
-    name: "Silver",
-    count: 100,
-    giveRole: false,
-    giveRoleRoleId: null,
-    removeRole: false,
-    removeRoleRoleId: null,
-    giveXP: false,
-    giveCoins: false,
-  },
-  gold: {
-    id: "gold",
-    name: "Gold",
-    count: 500,
-    giveRole: false,
-    giveRoleRoleId: null,
-    removeRole: false,
-    removeRoleRoleId: null,
-    giveXP: false,
-    giveCoins: false,
-  },
-  diamond: {
-    id: "diamond",
-    name: "Diamond",
-    count: 1000,
-    giveRole: false,
-    giveRoleRoleId: null,
-    removeRole: false,
-    removeRoleRoleId: null,
-    giveXP: false,
-    giveCoins: false,
+  "legendary-member": {
+    id: "legendary-member",
+    name: "Legendary Member",
+    description: "Reach max level in the server.",
+    category: "Levels",
+    tier: "diamond",
+    goal: 100,
+    progress: 62,
+    earned: false,
   },
 };
 
-const tierOrder = ["bronze", "silver", "gold", "diamond"];
+// Optional: categories list if you want to pass to children later
+const CATEGORIES = [
+  { id: "all", label: "All Achievements" },
+  { id: "messages", label: "Messages" },
+  { id: "reactions", label: "Reactions" },
+  { id: "voice", label: "Voice" },
+  { id: "activity", label: "Activity" },
+  { id: "levels", label: "Levels" },
+];
 
-// ---------------------------------------------------------------------------
-// Small UI helpers
-// ---------------------------------------------------------------------------
-function Toggle({ checked, onChange }) {
-  return (
-    <label className="relative inline-flex items-center cursor-pointer select-none">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={checked}
-        onChange={onChange}
-      />
+export default function AchievementsPage({ params }) {
+  const guildId = params?.guildId;
 
-      {/* Track */}
-      <div
-        className="
-        w-10 h-5 rounded-full 
-        bg-slate-600 
-        peer-checked:bg-blue-500
-        transition-colors duration-200
-      "
-      ></div>
-
-      {/* Knob */}
-      <div
-        className="
-        absolute left-0.5 top-0.5 
-        w-4 h-4 rounded-full bg-white shadow 
-        transition-all duration-200
-        peer-checked:translate-x-5
-      "
-      ></div>
-    </label>
-  );
-}
-
-function SaveButton({ state, onClick }) {
-  const isSaving = state === "saving";
-  const isSaved = state === "saved";
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={isSaving}
-      className={`px-4 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition
-        ${
-          isSaved
-            ? "bg-emerald-600 hover:bg-emerald-600 text-white"
-            : "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
-        }`}
-    >
-      {isSaving && (
-        <span className="h-3 w-3 rounded-full border border-white/40 border-t-transparent animate-spin" />
-      )}
-      {isSaving ? "Saving…" : isSaved ? "Saved ✓" : "Save"}
-    </button>
-  );
-}
-
-/**
- * Simple role dropdown (placeholder for now, roles are fetched from your roles
- * API but not persisted anywhere yet).
- */
-function RewardRoleDropdown({ value, onChange, roles, loading }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const safeRoles = Array.isArray(roles) ? roles : [];
-  const filtered = safeRoles.filter((r) =>
-    r.name.toLowerCase().includes(search.toLowerCase())
+  const allAchievements = useMemo(
+    () => Object.values(ACHIEVEMENT_MAP),
+    []
   );
 
-  const selectedLabel = (() => {
-    if (loading) return "Loading…";
-    if (!value) return "Select a role";
-    const r = safeRoles.find((x) => x.id === value);
-    return r ? r.name : "Unknown role";
-  })();
+  const stats = useMemo(() => {
+    const total = allAchievements.length;
+    const earned = allAchievements.filter((a) => a.earned).length;
+
+    const tierCounts = allAchievements.reduce(
+      (acc, a) => {
+        acc[a.tier] = (acc[a.tier] || 0) + 1;
+        return acc;
+      },
+      { bronze: 0, silver: 0, gold: 0, diamond: 0 }
+    );
+
+    return { total, earned, tierCounts };
+  }, [allAchievements]);
 
   return (
-    <div className="relative w-full max-w-xs">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-left text-xs text-slate-200 flex items-center justify-between"
-      >
-        <span className="truncate">{selectedLabel}</span>
-        <span className="text-slate-400 text-[10px] ml-2">
-          {open ? "▴" : "▾"}
-        </span>
-      </button>
+    <div className="flex h-full flex-col gap-4">
+      {/* ------------------------------------------------------------------ */}
+      {/* TOP BAR / BREADCRUMB                                                */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            href={guildId ? `/dashboard/${guildId}` : "/dashboard"}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-900"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Back to Overview</span>
+          </Link>
 
-      {open && (
-        <div className="absolute z-30 mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 shadow-xl max-h-64 overflow-y-auto">
-          <div className="p-2 border-b border-slate-800">
-            <input
-              className="w-full rounded-md bg-slate-900 px-2 py-1 text-xs text-slate-200 border border-slate-700 outline-none"
-              placeholder="Search roles..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-white">Achievements</h1>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                BETA
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              Track your community&apos;s milestones, levels and flex-worthy stats.
+            </p>
+          </div>
+        </div>
+
+        {/* Right side – could be guild selector / profile later */}
+        <div className="flex items-center gap-3">
+          {guildId && (
+            <span className="rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-xs text-slate-300">
+              Guild ID: <span className="font-mono text-slate-100">{guildId}</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* HEADER CARD – USER / SERVER SUMMARY                                 */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr),minmax(0,1.2fr)]">
+        {/* Left: Profile + progress */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative h-14 w-14 overflow-hidden rounded-full border border-slate-700 bg-slate-900">
+                <Image
+                  src="/default-avatar.png"
+                  alt="User avatar"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  Your Achievement Progress
+                </p>
+                <p className="text-xs text-slate-400">
+                  {stats.earned} / {stats.total} achievements unlocked
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-1 text-right">
+              <p className="text-xs text-slate-400">Overall completion</p>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-emerald-500"
+                    style={{
+                      width: `${Math.round(
+                        (stats.earned / Math.max(stats.total, 1)) * 100
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-emerald-400">
+                  {Math.round((stats.earned / Math.max(stats.total, 1)) * 100)}%
+                </span>
+              </div>
+            </div>
           </div>
 
-          {loading && (
-            <div className="px-3 py-2 text-xs text-slate-400">Loading roles…</div>
-          )}
-
-          {!loading && filtered.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500">No roles found</div>
-          )}
-
-          {!loading &&
-            filtered.map((role) => (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => {
-                  onChange(role.id);
-                  setOpen(false);
-                }}
-                className={`flex w-full px-3 py-2 text-left text-xs hover:bg-slate-800 ${
-                  value === role.id ? "text-indigo-400" : "text-slate-300"
-                }`}
-              >
-                {role.name}
-              </button>
-            ))}
+          {/* Quick stat pills */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
+            <StatPill
+              label="Total Achievements"
+              value={stats.total}
+              sub="Available"
+            />
+            <StatPill
+              label="Unlocked"
+              value={stats.earned}
+              sub="Completed"
+              accent="emerald"
+            />
+            <StatPill
+              label="Gold & Diamond"
+              value={stats.tierCounts.gold + stats.tierCounts.diamond}
+              sub="High tier"
+            />
+            <StatPill
+              label="Bronze & Silver"
+              value={stats.tierCounts.bronze + stats.tierCounts.silver}
+              sub="Starter"
+            />
+          </div>
         </div>
-      )}
+
+        {/* Right: Tier legend / info */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-white">
+              Achievement Tiers
+            </p>
+            <button className="inline-flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-slate-900">
+              <span>How it works</span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </div>
+
+          <p className="mt-1 text-xs text-slate-400">
+            Tiers represent how hard an achievement is to unlock. Use them to
+            create progression paths for your members.
+          </p>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <TierRow
+              icon={tierIcons.bronze}
+              label="Bronze"
+              desc="Very easy starter achievements – show people how the system works."
+              count={stats.tierCounts.bronze}
+            />
+            <TierRow
+              icon={tierIcons.silver}
+              label="Silver"
+              desc="Requires some activity – perfect mid-game goals."
+              count={stats.tierCounts.silver}
+            />
+            <TierRow
+              icon={tierIcons.gold}
+              label="Gold"
+              desc="Harder, grindy or high-skill achievements."
+              count={stats.tierCounts.gold}
+            />
+            <TierRow
+              icon={tierIcons.diamond}
+              label="Diamond"
+              desc="Ultra-rare, brag-worthy achievements for your most active members."
+              count={stats.tierCounts.diamond}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* MAIN CONTENT – TABS + GRID                                         */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-3 sm:p-4">
+        {/* If your AchievementsTabs component takes props, you can pass them here.
+           For now we just render it, and it can handle its own state / fetching. */}
+        <AchievementsTabs
+          // Uncomment / adjust these if AchievementsTabs expects them:
+          // achievements={allAchievements}
+          // categories={CATEGORIES}
+        />
+
+        {/* If AchievementsTabs already renders the list, you don't need extra content here.
+           If it only renders tab controls, you can add a grid below and feed in
+           filtered achievements. Example (commented so it doesn't break anything):
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {allAchievements.map((ach) => (
+            <AchievementCard key={ach.id} achievement={ach} />
+          ))}
+        </div>
+        */}
+      </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main page
+// SMALL SUBCOMPONENTS
 // ---------------------------------------------------------------------------
-export default function AchievementEditorPage({ params }) {
-  const { guildId, achievementId } = params;
 
-  const base = useMemo(
-    () => ACHIEVEMENT_MAP[achievementId] ?? ACHIEVEMENT_MAP["king-of-spam"],
-    [achievementId]
-  );
-
-  const [name, setName] = useState(base.name);
-  const [description] = useState(base.description);
-  const [tiers, setTiers] = useState(DEFAULT_TIERS);
-  const [openTier, setOpenTier] = useState("bronze");
-
-  const [dontTrackPast, setDontTrackPast] = useState(true);
-  const [deadlineEnabled, setDeadlineEnabled] = useState(false);
-  const [almostThere, setAlmostThere] = useState(true);
-
-  const [overrideMessage, setOverrideMessage] = useState(false);
-  const [overrideContent, setOverrideContent] = useState("");
-
-  const [saveState, setSaveState] = useState("idle"); // idle | saving | saved
-
-  // Roles for reward dropdowns
-  const [roles, setRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadRoles() {
-      try {
-        setRolesLoading(true);
-        const res = await fetch(`/api/discord/guilds/${guildId}/roles`);
-        const json = await res.json();
-        if (!cancelled && json.ok) {
-          setRoles(json.roles || []);
-        }
-      } catch (e) {
-        console.error("Failed to load roles", e);
-      } finally {
-        if (!cancelled) setRolesLoading(false);
-      }
-    }
-
-    loadRoles();
-    return () => {
-      cancelled = true;
-    };
-  }, [guildId]);
-
-  const updateTier = (tierId, patch) => {
-    setTiers((prev) => ({
-      ...prev,
-      [tierId]: { ...prev[tierId], ...patch },
-    }));
-  };
-
-  const handleSave = () => {
-    setSaveState("saving");
-    setTimeout(() => {
-      // later: hook this up to your real DB / API
-      console.log("Saving achievement config:", {
-        id: achievementId,
-        name,
-        description,
-        tiers,
-        dontTrackPast,
-        deadlineEnabled,
-        almostThere,
-        overrideMessage,
-        overrideContent,
-      });
-      setSaveState("saved");
-      setTimeout(() => setSaveState("idle"), 1500);
-    }, 900);
-  };
-
-  const handleDelete = () => {
-    if (
-      typeof window !== "undefined" &&
-      window.confirm("Delete this achievement?")
-    ) {
-      console.log("Delete achievement", achievementId);
-      // later: redirect back to overview
-    }
-  };
-
-  const handleReset = () => {
-    if (
-      typeof window !== "undefined" &&
-      window.confirm("Reset all progress for this achievement?")
-    ) {
-      console.log("Reset progress for", achievementId);
-    }
-  };
+function StatPill({ label, value, sub, accent = "slate" }) {
+  const accentClasses =
+    accent === "emerald"
+      ? "text-emerald-400 bg-emerald-500/10"
+      : "text-slate-200 bg-slate-700/20";
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Top row: back + title + buttons */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/dashboard/${guildId}/achievements`}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 border border-slate-700 hover:bg-slate-800"
-          >
-            <ChevronLeft size={16} className="text-slate-300" />
-          </Link>
+    <div className="rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2">
+      <p className="text-[11px] text-slate-400">{label}</p>
+      <div className="mt-1 flex items-baseline justify-between">
+        <span className={`text-lg font-semibold ${accentClasses} px-2 py-0.5 rounded-lg`}>
+          {value}
+        </span>
+        {sub && <span className="text-[11px] text-slate-500">{sub}</span>}
+      </div>
+    </div>
+  );
+}
 
-          <div className="flex items-center gap-4">
-            {/* Big icon in header (use bronze as base) */}
-            <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-slate-800 shadow-md shadow-amber-500/20">
-              <Image
-                src={tierIcons.bronze}
-                alt="Achievement Icon"
-                fill
-                className="object-cover"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <input
-                  className="bg-transparent border-none outline-none text-xl md:text-2xl font-semibold text-white"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <span className="text-xs text-slate-500">✏️</span>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Configure this achievement&apos;s progress, action and trophy
-                tiers.
-              </p>
-            </div>
-          </div>
+function TierRow({ icon, label, desc, count }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/80 p-2.5">
+      <div className="relative mt-0.5 h-7 w-7 overflow-hidden rounded-lg bg-slate-900">
+        <Image
+          src={icon}
+          alt={`${label} tier icon`}
+          fill
+          className="object-contain p-1"
+        />
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-white">{label}</p>
+          <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400">
+            {count} total
+          </span>
         </div>
+        <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{desc}</p>
+      </div>
+    </div>
+  );
+}
 
-        {/* Buttons */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleDelete}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600/90 hover:bg-red-600 text-white"
-          >
-            Delete
-          </button>
-          <button
-            onClick={handleReset}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-100"
-          >
-            Reset Progress
-          </button>
-          <SaveButton state={saveState} onClick={handleSave} />
+// Optional card if you want to manually render achievement grid later
+export function AchievementCard({ achievement }) {
+  const pct = Math.min(
+    100,
+    Math.round((achievement.progress / Math.max(achievement.goal, 1)) * 100)
+  );
+
+  const tierColor =
+    achievement.tier === "bronze"
+      ? "bg-amber-700/30 text-amber-300 border-amber-700/60"
+      : achievement.tier === "silver"
+      ? "bg-slate-500/30 text-slate-100 border-slate-400/60"
+      : achievement.tier === "gold"
+      ? "bg-yellow-500/20 text-yellow-300 border-yellow-400/70"
+      : "bg-cyan-500/20 text-cyan-200 border-cyan-400/70";
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/80 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-white">
+            {achievement.name}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {achievement.description}
+          </p>
+        </div>
+        <span
+          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${tierColor}`}
+        >
+          {achievement.tier.toUpperCase()}
+        </span>
+      </div>
+
+      <div className="mt-1">
+        <div className="flex items-center justify-between text-[11px] text-slate-400">
+          <span>
+            {achievement.progress} / {achievement.goal}
+          </span>
+          <span>{pct}%</span>
+        </div>
+        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+          <div
+            className={`h-full rounded-full ${
+              achievement.earned ? "bg-emerald-500" : "bg-sky-500"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
 
-      {/* Tabs (3 tabs – Achievements / Configuration / Commands) */}
-      <AchievementsTabs guildId={guildId} activeTab="achievements" />
-
-      {/* Body */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">
-        {/* Left column */}
-        <div className="space-y-6">
-          {/* Achievement progress */}
-          <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-100">
-              Achievement progress
-            </h3>
-            <p className="text-xs text-slate-400">
-              Check how many members unlocked this achievement.
-            </p>
-            <div className="mt-3 h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-              <div className="h-full bg-blue-500 w-0" />
-            </div>
-            <div className="mt-1 text-[11px] text-slate-500 flex justify-between">
-              <span>Server progress</span>
-              <span>0%</span>
-            </div>
-          </div>
-
-          {/* Action + override message */}
-          <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-5 space-y-5">
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-100">Action</h3>
-              <p className="text-xs text-slate-400">
-                What should members do to progress toward this achievement?
-              </p>
-            </div>
-
-            <div className="w-full max-w-md">
-              <select
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100"
-                defaultValue="messages"
-              >
-                <option value="messages">
-                  Member sends &#123;count&#125; messages
-                </option>
-                <option value="reactions">
-                  Member reacts to &#123;count&#125; messages
-                </option>
-                <option value="voice">
-                  Member spends &#123;minutes&#125; minutes in voice
-                </option>
-                <option value="threads">
-                  Member creates &#123;count&#125; threads
-                </option>
-              </select>
-            </div>
-
-            {/* Override message */}
-            <div className="pt-4 border-t border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-semibold text-slate-200">
-                    Override announcement message
-                  </div>
-                  <div className="text-[11px] text-slate-400 max-w-md">
-                    Override the default configuration message with a custom
-                    message for this achievement.
-                  </div>
-                </div>
-                <Toggle
-                  checked={overrideMessage}
-                  onChange={() => setOverrideMessage((v) => !v)}
-                />
-              </div>
-
-              {overrideMessage && (
-                <textarea
-                  className="mt-2 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 h-24 resize-none"
-                  placeholder="Custom announcement message…"
-                  value={overrideContent}
-                  onChange={(e) => setOverrideContent(e.target.value)}
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Trophy tiers */}
-          <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-100">
-              Trophy Tiers
-            </h3>
-
-            <div className="space-y-3">
-              {tierOrder.map((id) => {
-                const tier = tiers[id];
-                const open = openTier === id;
-
-                return (
-                  <div
-                    key={id}
-                    className="rounded-lg bg-slate-900 border border-slate-800 overflow-hidden shadow-sm shadow-black/30"
-                  >
-                    {/* Header */}
-                    <button
-                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-900/80 transition-all duration-200"
-                      onClick={() => setOpenTier(open ? "" : id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-slate-800 ring-1 ring-slate-700/60">
-                          <Image
-                            src={tierIcons[id]}
-                            alt={tier.name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-slate-100">
-                            {tier.name}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            Send {tier.count} messages
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown
-                        size={16}
-                        className={`text-slate-400 transition-transform ${
-                          open ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {/* Body */}
-                    <div
-                      className={`border-t border-slate-800 overflow-visible transition-all duration-300 ${
-                        open ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      {open && (
-                        <div className="px-4 py-4 space-y-5">
-                          {/* Count */}
-                          <div className="space-y-1">
-                            <div className="text-xs font-semibold text-slate-300">
-                              Count
-                            </div>
-                            <input
-                              type="number"
-                              className="w-full max-w-xs bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100"
-                              value={tier.count}
-                              onChange={(e) =>
-                                updateTier(id, {
-                                  count: Number(e.target.value),
-                                })
-                              }
-                            />
-                          </div>
-
-                          {/* Rewards */}
-                          <div className="space-y-3">
-                            <div className="text-xs font-semibold text-slate-300">
-                              Rewards
-                            </div>
-
-                            {/* Give role */}
-                            <div className="flex flex-col gap-2 text-xs text-slate-200">
-                              <div className="flex items-center justify-between gap-4">
-                                <span>Give a role for achieving</span>
-                                <Toggle
-                                  checked={tier.giveRole}
-                                  onChange={() =>
-                                    updateTier(id, { giveRole: !tier.giveRole })
-                                  }
-                                />
-                              </div>
-                              {tier.giveRole && (
-                                <RewardRoleDropdown
-                                  value={tier.giveRoleRoleId}
-                                  onChange={(roleId) =>
-                                    updateTier(id, { giveRoleRoleId: roleId })
-                                  }
-                                  roles={roles}
-                                  loading={rolesLoading}
-                                />
-                              )}
-                            </div>
-
-                            {/* Remove role */}
-                            <div className="flex flex-col gap-2 text-xs text-slate-200 pt-2 border-t border-slate-800/60">
-                              <div className="flex items-center justify-between gap-4">
-                                <span>Remove a role for achieving</span>
-                                <Toggle
-                                  checked={tier.removeRole}
-                                  onChange={() =>
-                                    updateTier(id, {
-                                      removeRole: !tier.removeRole,
-                                    })
-                                  }
-                                />
-                              </div>
-                              {tier.removeRole && (
-                                <RewardRoleDropdown
-                                  value={tier.removeRoleRoleId}
-                                  onChange={(roleId) =>
-                                    updateTier(id, {
-                                      removeRoleRoleId: roleId,
-                                    })
-                                  }
-                                  roles={roles}
-                                  loading={rolesLoading}
-                                />
-                              )}
-                            </div>
-
-                            {/* XP + coins */}
-                            <div className="flex flex-col gap-2 text-xs text-slate-200 pt-2 border-t border-slate-800/60">
-                              <div className="flex items-center justify-between gap-4">
-                                <span>Give XP for achieving</span>
-                                <Toggle
-                                  checked={tier.giveXP}
-                                  onChange={() =>
-                                    updateTier(id, { giveXP: !tier.giveXP })
-                                  }
-                                />
-                              </div>
-                              <div className="flex items-center justify-between gap-4">
-                                <span>Give coins for achieving</span>
-                                <Toggle
-                                  checked={tier.giveCoins}
-                                  onChange={() =>
-                                    updateTier(id, { giveCoins: !tier.giveCoins })
-                                  }
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+      {achievement.earned && (
+        <div className="mt-1 inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-300">
+          <span>✅ Unlocked</span>
+          <span className="text-slate-400">•</span>
+          <span>Keep going for higher tiers</span>
         </div>
-
-        {/* Right column: settings */}
-        <div className="space-y-6">
-          <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-100">Settings</h3>
-
-            <div className="space-y-4 text-xs text-slate-200">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="font-semibold">
-                    Don&apos;t track past progress
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Only track progress from now on, not past activity.
-                  </div>
-                </div>
-                <Toggle
-                  checked={dontTrackPast}
-                  onChange={() => setDontTrackPast((v) => !v)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="font-semibold">Set deadline</div>
-                  <div className="text-[11px] text-slate-400">
-                    Great for seasonal events—achievement ends on your chosen
-                    date.
-                  </div>
-                </div>
-                <Toggle
-                  checked={deadlineEnabled}
-                  onChange={() => setDeadlineEnabled((v) => !v)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="font-semibold">
-                    Send &apos;Almost there&apos;
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Notify members at 75% progress toward this achievement.
-                  </div>
-                </div>
-                <Toggle
-                  checked={almostThere}
-                  onChange={() => setAlmostThere((v) => !v)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
