@@ -1,1060 +1,578 @@
-// app/dashboard/[guildId]/achievements/page.js
+// app/dashboard/[guildId]/achievements/[achievementId]/page.js
 "use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import {
-  ChevronLeft,
-  ChevronDown,
-  Search,
-  Filter,
-  Star,
-  Trophy,
-  X,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
-/**
- * ---------------------------------------------------------------------------
- *  BASIC CONFIG
- * ---------------------------------------------------------------------------
- */
-
-const CATEGORY_TABS = [
-  { id: "all", label: "All" },
-  { id: "messages", label: "Messages" },
-  { id: "reactions", label: "Reactions" },
-  { id: "voice", label: "Voice" },
-  { id: "activity", label: "Activity" },
-  { id: "levels", label: "Levels" },
-  { id: "staff", label: "Staff / Mod" },
-];
-
-const FILTER_MODES = [
-  { id: "all", label: "All" },
-  { id: "earned", label: "Unlocked" },
-  { id: "locked", label: "Locked" },
-];
-
-const SORT_MODES = [
-  { id: "recommended", label: "Recommended" },
-  { id: "progress", label: "Progress" },
-  { id: "tier", label: "Tier" },
-  { id: "rarity", label: "Rarest" },
-  { id: "name", label: "Name A→Z" },
-];
-
-/**
- * ---------------------------------------------------------------------------
- *  MOCK DATA (replace with DB later)
- * ---------------------------------------------------------------------------
- */
-
-const MOCK_ACHIEVEMENTS = [
+const TIER_CONFIG = [
   {
-    id: "first-message",
-    name: "First Message",
-    description: "Send your very first message in the server.",
-    category: "messages",
-    tier: "bronze",
-    goal: 1,
-    progress: 1,
-    earned: true,
-    rarity: 0.75,
+    id: "bronze",
+    label: "Bronze",
+    description: "Send 20 messages",
+    defaultCount: 20,
   },
   {
-    id: "king-of-spam",
-    name: "King of Spam",
-    description: "Send 10,000 messages across all channels.",
-    category: "messages",
-    tier: "gold",
-    goal: 10000,
-    progress: 7234,
-    earned: false,
-    rarity: 0.05,
+    id: "silver",
+    label: "Silver",
+    description: "Send 100 messages",
+    defaultCount: 100,
   },
   {
-    id: "reaction-enjoyer",
-    name: "Reaction Enjoyer",
-    description: "React to 100 messages.",
-    category: "reactions",
-    tier: "silver",
-    goal: 100,
-    progress: 86,
-    earned: false,
-    rarity: 0.3,
+    id: "gold",
+    label: "Gold",
+    description: "Send 500 messages",
+    defaultCount: 500,
   },
   {
-    id: "reaction-master",
-    name: "Reaction Master",
-    description: "React to 500 messages in total.",
-    category: "reactions",
-    tier: "gold",
-    goal: 500,
-    progress: 120,
-    earned: false,
-    rarity: 0.12,
-  },
-  {
-    id: "voice-chatter",
-    name: "Voice Chatter",
-    description: "Spend 600 minutes in voice channels.",
-    category: "voice",
-    tier: "silver",
-    goal: 600,
-    progress: 340,
-    earned: false,
-    rarity: 0.18,
-  },
-  {
-    id: "night-owl",
-    name: "Night Owl",
-    description: "Be in voice between 1am and 4am for 5 days.",
-    category: "voice",
-    tier: "gold",
-    goal: 5,
-    progress: 2,
-    earned: false,
-    rarity: 0.04,
-  },
-  {
-    id: "server-regular",
-    name: "Server Regular",
-    description: "Be active for 30 days in a row.",
-    category: "activity",
-    tier: "gold",
-    goal: 30,
-    progress: 19,
-    earned: false,
-    rarity: 0.1,
-  },
-  {
-    id: "year-one",
-    name: "Year One",
-    description: "Stay in the server for a full year.",
-    category: "activity",
-    tier: "diamond",
-    goal: 365,
-    progress: 280,
-    earned: false,
-    rarity: 0.02,
-  },
-  {
-    id: "level-10",
-    name: "Level 10",
-    description: "Reach level 10 in the leveling system.",
-    category: "levels",
-    tier: "silver",
-    goal: 10,
-    progress: 10,
-    earned: true,
-    rarity: 0.45,
-  },
-  {
-    id: "level-50",
-    name: "Level 50",
-    description: "Reach level 50 and flex on everyone.",
-    category: "levels",
-    tier: "gold",
-    goal: 50,
-    progress: 32,
-    earned: false,
-    rarity: 0.06,
-  },
-  {
-    id: "level-100",
-    name: "Level 100",
-    description: "Reach the maximum level in the server.",
-    category: "levels",
-    tier: "diamond",
-    goal: 100,
-    progress: 62,
-    earned: false,
-    rarity: 0.02,
-  },
-  {
-    id: "mod-helper",
-    name: "Helper",
-    description: "Reply to 50 messages in help channels.",
-    category: "staff",
-    tier: "silver",
-    goal: 50,
-    progress: 18,
-    earned: false,
-    rarity: 0.16,
-  },
-  {
-    id: "mod-hammer",
-    name: "Ban Hammer",
-    description: "Issue 25 successful moderations (warn / mute / ban).",
-    category: "staff",
-    tier: "gold",
-    goal: 25,
-    progress: 9,
-    earned: false,
-    rarity: 0.03,
+    id: "diamond",
+    label: "Diamond",
+    description: "Send 1000 messages",
+    defaultCount: 1000,
   },
 ];
 
-/**
- * ---------------------------------------------------------------------------
- *  MAIN PAGE – "Old school" thick UI
- * ---------------------------------------------------------------------------
- */
+const ACTION_OPTIONS = [
+  { id: "messages", label: "Member sends [count] messages" },
+  { id: "voice", label: "Member spends [time] in voice" },
+  { id: "reactions", label: "Member adds [count] reactions" },
+];
 
-export default function AchievementsPage({ params }) {
+export default function AchievementEditorPage({ params }) {
+  const router = useRouter();
   const guildId = params?.guildId;
+  const achievementId = params?.achievementId;
 
-  // Tabs / filters
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [filterMode, setFilterMode] = useState("all"); // all / earned / locked
-  const [sortMode, setSortMode] = useState("recommended");
-
-  // Toggles
-  const [showProgress, setShowProgress] = useState(true);
-  const [showRarity, setShowRarity] = useState(true);
-  const [showTierBadges, setShowTierBadges] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
-
-  // Search + "advanced" toggle
-  const [search, setSearch] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const achievements = useMemo(() => MOCK_ACHIEVEMENTS, []);
-
-  // Overall stats
-  const stats = useMemo(() => {
-    const total = achievements.length;
-    const earned = achievements.filter((a) => a.earned).length;
-    const locked = total - earned;
-
-    const tierCounts = achievements.reduce(
-      (acc, a) => {
-        acc[a.tier] = (acc[a.tier] || 0) + 1;
-        return acc;
+  // ---------------------------------------------------------------------------
+  // MOCKED ACHIEVEMENT – you can replace this with a real fetch later
+  // ---------------------------------------------------------------------------
+  const initialAchievement = useMemo(
+    () => ({
+      id: achievementId || "king-of-spam",
+      name: "King of Spam",
+      serverProgress: 0,
+      actionType: "messages",
+      overrideAnnouncement: false,
+      tiers: TIER_CONFIG.map((tier) => ({
+        id: tier.id,
+        label: tier.label,
+        description: tier.description,
+        count: tier.defaultCount,
+        rewards: {
+          giveRole: false,
+          removeRole: false,
+          giveXP: false,
+          giveCoins: false,
+        },
+      })),
+      settings: {
+        dontTrackPast: true,
+        setDeadline: false,
+        deadline: "",
+        almostThere: true,
       },
-      { bronze: 0, silver: 0, gold: 0, diamond: 0 }
+    }),
+    [achievementId]
+  );
+
+  // ---------------------------------------------------------------------------
+  // STATE
+  // ---------------------------------------------------------------------------
+  const [name, setName] = useState(initialAchievement.name);
+  const [serverProgress] = useState(initialAchievement.serverProgress);
+  const [actionType, setActionType] = useState(initialAchievement.actionType);
+  const [overrideAnnouncement, setOverrideAnnouncement] = useState(
+    initialAchievement.overrideAnnouncement
+  );
+
+  const [tiers, setTiers] = useState(initialAchievement.tiers);
+  const [expandedTierId, setExpandedTierId] = useState("bronze");
+
+  const [settings, setSettings] = useState(initialAchievement.settings);
+
+  // fake “saving” state
+  const [saving, setSaving] = useState(false);
+
+  // ---------------------------------------------------------------------------
+  // HANDLERS
+  // ---------------------------------------------------------------------------
+  function handleTierChange(tierId, changes) {
+    setTiers((prev) =>
+      prev.map((t) => (t.id === tierId ? { ...t, ...changes } : t))
     );
+  }
 
-    const completion = Math.round((earned / Math.max(total, 1)) * 100);
+  function handleTierRewardToggle(tierId, key) {
+    setTiers((prev) =>
+      prev.map((t) =>
+        t.id === tierId
+          ? {
+              ...t,
+              rewards: {
+                ...t.rewards,
+                [key]: !t.rewards[key],
+              },
+            }
+          : t
+      )
+    );
+  }
 
-    return {
-      total,
-      earned,
-      locked,
-      completion,
-      tierCounts,
-    };
-  }, [achievements]);
+  function handleSave() {
+    // hook this to your API later
+    setSaving(true);
+    setTimeout(() => {
+      setSaving(false);
+      // console.log("Save payload", {
+      //   id: achievementId,
+      //   name,
+      //   actionType,
+      //   overrideAnnouncement,
+      //   tiers,
+      //   settings,
+      // });
+    }, 750);
+  }
 
-  // Filter + sort list
-  const visibleAchievements = useMemo(() => {
-    let list = [...achievements];
+  function handleResetProgress() {
+    // just a stub – wire to backend later
+    alert("Reset progress clicked (stub)");
+  }
 
-    // Category
-    if (activeCategory !== "all") {
-      list = list.filter((a) => a.category === activeCategory);
+  function handleDelete() {
+    // stub: confirm + redirect back to overview
+    const ok = confirm("Are you sure you want to delete this achievement?");
+    if (!ok) return;
+
+    // call delete API here later
+    if (guildId) {
+      router.push(`/dashboard/${guildId}/achievements`);
+    } else {
+      router.push("/dashboard");
     }
+  }
 
-    // Filter mode
-    if (filterMode === "earned") {
-      list = list.filter((a) => a.earned);
-    } else if (filterMode === "locked") {
-      list = list.filter((a) => !a.earned);
-    }
-
-    // Search
-    if (search.trim().length > 0) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.description.toLowerCase().includes(q)
-      );
-    }
-
-    // Sort
-    list.sort((a, b) => {
-      switch (sortMode) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "progress": {
-          const aPct = a.progress / Math.max(a.goal, 1);
-          const bPct = b.progress / Math.max(b.goal, 1);
-          return bPct - aPct;
-        }
-        case "tier":
-          return tierRank(b.tier) - tierRank(a.tier);
-        case "rarity":
-          return a.rarity - b.rarity; // rarer first
-        case "recommended":
-        default: {
-          const aScore =
-            (a.earned ? 40 : 0) +
-            tierRank(a.tier) * 10 +
-            (a.progress / Math.max(a.goal, 1)) * 20 -
-            a.rarity * 15;
-          const bScore =
-            (b.earned ? 40 : 0) +
-            tierRank(b.tier) * 10 +
-            (b.progress / Math.max(b.goal, 1)) * 20 -
-            b.rarity * 15;
-          return bScore - aScore;
-        }
-      }
-    });
-
-    return list;
-  }, [achievements, activeCategory, filterMode, search, sortMode]);
-
-  /**
-   * -------------------------------------------------------------------------
-   *  RENDER
-   * -------------------------------------------------------------------------
-   */
-
+  // ---------------------------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------------------------
   return (
-    <div className="flex h-full flex-col gap-4">
-      {/* ------------------------------------------------------------------ */}
-      {/* TOP BAR / BREADCRUMB                                              */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex h-full flex-col bg-slate-950">
+      {/* TOP BAR (like your screenshot) */}
+      <header className="flex items-center justify-between border-b border-slate-900 bg-slate-950 px-6 py-3">
         <div className="flex items-center gap-3">
           <Link
-            href={guildId ? `/dashboard/${guildId}` : "/dashboard"}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-900"
+            href={
+              guildId
+                ? `/dashboard/${guildId}/achievements`
+                : "/dashboard"
+            }
+            className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-slate-900"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span>Back to Overview</span>
           </Link>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-white">
-                Achievements
-              </h1>
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
-                BETA
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-slate-400">
-              Create flex-worthy milestones for your members. Unlock, grind,
-              and show off.
-            </p>
+          <div className="flex items-center gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="min-w-[120px] bg-transparent text-lg font-semibold text-white outline-none"
+            />
+            <span className="text-sm text-slate-500">✏️</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {guildId && (
-            <span className="hidden rounded-full border border-slate-800 bg-slate-950 px-3 py-1 text-xs text-slate-300 sm:inline-flex">
-              Guild ID:
-              <span className="ml-1 font-mono text-slate-100">{guildId}</span>
+          <button
+            onClick={handleDelete}
+            className="rounded-md bg-[#3c2630] px-3 py-1.5 text-xs font-medium text-[#f87171] hover:bg-[#4b2e3a]"
+          >
+            <span className="inline-flex items-center gap-1">
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
             </span>
-          )}
-
-          <button className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/15">
-            <Filter className="h-3.5 w-3.5" />
-            <span>Auto-balance rewards (soon)</span>
+          </button>
+          <button
+            onClick={handleResetProgress}
+            className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-700"
+          >
+            Reset Progress
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-md bg-[#2563eb] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* HEADER STATS + USER CARD                                          */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2.3fr),minmax(0,1.7fr)]">
-        {/* Left: User overview + progress */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="relative h-14 w-14 overflow-hidden rounded-full border border-slate-700 bg-slate-900">
-                <Image
-                  src="/default-avatar.png"
-                  alt="User avatar"
-                  width={56}
-                  height={56}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  Your Achievement Progress
-                </p>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  {stats.earned} / {stats.total} unlocked •{" "}
-                  <span className="text-emerald-400">{stats.completion}%</span>{" "}
-                  complete
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end gap-1 text-right">
-              <p className="text-xs text-slate-400">Overall completion</p>
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 w-32 overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className="h-full rounded-full bg-emerald-500"
-                    style={{ width: `${stats.completion}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-emerald-400">
-                  {stats.completion}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div className="mt-4 grid gap-3 sm:grid-cols-4">
-            <StatCard
-              label="Total"
-              value={stats.total}
-              sub="Achievements"
-              accent="default"
-            />
-            <StatCard
-              label="Unlocked"
-              value={stats.earned}
-              sub="Completed"
-              accent="emerald"
-            />
-            <StatCard
-              label="Locked"
-              value={stats.locked}
-              sub="To unlock"
-              accent="warning"
-            />
-            <StatCard
-              label="High tier"
-              value={stats.tierCounts.gold + stats.tierCounts.diamond}
-              sub="Gold + Diamond"
-              accent="tier"
-            />
-          </div>
-
-          {/* Little hint box */}
-          <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-xs text-slate-400">
-            <p>
-              Tip: Use the{" "}
-              <span className="font-semibold text-emerald-400">
-                filters below
-              </span>{" "}
-              to focus on locked achievements or a specific category like
-              Messages, Voice or Staff.
-            </p>
-          </div>
-        </div>
-
-        {/* Right: Tier breakdown - more old-style, chunky rows */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold text-white">
-                Tier breakdown
+      {/* MAIN SCROLL AREA */}
+      <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="mx-auto flex max-w-5xl flex-col gap-5">
+          {/* ACHIEVEMENT PROGRESS + ACTION CARD */}
+          <section className="rounded-xl border border-slate-900 bg-[#10141f] p-5 shadow-sm">
+            {/* progress block */}
+            <div className="mb-6 rounded-lg bg-[#151927] p-4">
+              <p className="text-sm font-semibold text-slate-100">
+                Achievement progress
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                Each tier represents how grindy or rare the achievement is.
+                Check how many members unlocked this achievement
               </p>
-            </div>
-            <button className="inline-flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-slate-900">
-              <Trophy className="h-3.5 w-3.5" />
-              <span>View examples</span>
-            </button>
-          </div>
 
-          <div className="mt-3 flex flex-col gap-2">
-            <TierRow
-              tier="bronze"
-              label="Bronze"
-              count={stats.tierCounts.bronze}
-              description="Very easy starter achievements. Good for onboarding."
-            />
-            <TierRow
-              tier="silver"
-              label="Silver"
-              count={stats.tierCounts.silver}
-              description="Takes a bit of effort. People hit these often."
-            />
-            <TierRow
-              tier="gold"
-              label="Gold"
-              count={stats.tierCounts.gold}
-              description="Harder, longer-term grinds or high-skill stuff."
-            />
-            <TierRow
-              tier="diamond"
-              label="Diamond"
-              count={stats.tierCounts.diamond}
-              description="Ultra-rare flex rewards for your top 1% grinders."
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* CATEGORY TABS ROW (big pills)                                     */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3 sm:px-4 sm:py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {CATEGORY_TABS.map((tab) => {
-              const active = tab.id === activeCategory;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveCategory(tab.id)}
-                  className={[
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition",
-                    active
-                      ? "border-emerald-500/80 bg-emerald-500/10 text-emerald-300"
-                      : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900",
-                  ].join(" ")}
-                >
-                  <span>{tab.label}</span>
-                  {active && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Sort dropdown very “old style” */}
-          <SortChip
-            sortMode={sortMode}
-            setSortMode={setSortMode}
-          />
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* FILTERS STRIP: Filter mode pills + toggles + search                */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3 sm:px-4 sm:py-4">
-        {/* Filter mode row */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Left: Filter mode pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {FILTER_MODES.map((f) => {
-              const active = f.id === filterMode;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => setFilterMode(f.id)}
-                  className={[
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition",
-                    active
-                      ? "border-emerald-500/80 bg-emerald-500/10 text-emerald-300"
-                      : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-900",
-                  ].join(" ")}
-                >
-                  {f.id === "earned" && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  )}
-                  {f.id === "locked" && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-yellow-400" />
-                  )}
-                  <span>{f.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right: search box */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-300">
-              <Search className="h-3.5 w-3.5 text-slate-500" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search achievements…"
-                className="w-32 bg-transparent text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none sm:w-48"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="rounded-full p-0.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
+              <div className="mt-4 space-y-1.5">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                  Server progress
+                </p>
+                <div className="h-1.5 rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-slate-500"
+                    style={{ width: `${serverProgress}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {serverProgress.toFixed(0)}%
+                </p>
+              </div>
             </div>
 
-            <button
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-[11px] text-slate-300 hover:bg-slate-900"
-            >
-              <Filter className="h-3.5 w-3.5" />
-              <span>Advanced</span>
-              <ChevronDown
-                className={`h-3 w-3 transition ${showAdvanced ? "rotate-180" : "rotate-0"}`}
+            {/* action dropdown */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                Action
+              </p>
+
+              <div className="relative inline-flex min-w-[260px] items-center rounded-md border border-slate-800 bg-[#151927] px-3 py-2 text-xs text-slate-100">
+                <select
+                  value={actionType}
+                  onChange={(e) => setActionType(e.target.value)}
+                  className="w-full bg-transparent text-xs text-slate-100 outline-none"
+                >
+                  {ACTION_OPTIONS.map((opt) => (
+                    <option
+                      key={opt.id}
+                      value={opt.id}
+                      className="bg-slate-900"
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              </div>
+            </div>
+
+            {/* override announcement toggle */}
+            <div className="mt-6 flex items-start justify-between gap-4 rounded-lg bg-[#151927] px-4 py-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-100">
+                  Override announcement message
+                </p>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Override the default configuration message with a custom
+                  message for this achievement
+                </p>
+              </div>
+              <Toggle
+                enabled={overrideAnnouncement}
+                onChange={setOverrideAnnouncement}
               />
-            </button>
-          </div>
-        </div>
+            </div>
+          </section>
 
-        {/* Advanced toggles row – just like the old “too much stuff” layout */}
-        {showAdvanced && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <ToggleRow
-              label="Show progress bars"
-              description="Display % towards each goal."
-              enabled={showProgress}
-              onChange={setShowProgress}
-            />
-            <ToggleRow
-              label="Show rarity info"
-              description="Common, Rare, Ultra Rare, etc."
-              enabled={showRarity}
-              onChange={setShowRarity}
-            />
-            <ToggleRow
-              label="Show tier badges"
-              description="Bronze / Silver / Gold / Diamond chips."
-              enabled={showTierBadges}
-              onChange={setShowTierBadges}
-            />
-            <ToggleRow
-              label="Compact card mode"
-              description="Smaller cards, less padding."
-              enabled={compactMode}
-              onChange={setCompactMode}
-            />
-          </div>
-        )}
-      </div>
+          {/* TROPHY TIERS */}
+          <section className="rounded-xl border border-slate-900 bg-[#10141f] p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-100">
+              Trophy Tiers
+            </p>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* MAIN GRID – Achievements list                                      */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950/90 px-3 py-3 sm:px-4 sm:py-4">
-        {/* Little header row (count + info) */}
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-          <div className="flex items-center gap-2">
-            <span>
-              Showing{" "}
-              <span className="font-semibold text-slate-200">
-                {visibleAchievements.length}
-              </span>{" "}
-              / {achievements.length} achievements
-            </span>
-            {activeCategory !== "all" && (
-              <>
-                <span className="text-slate-700">•</span>
-                <span>Category: {labelForCategory(activeCategory)}</span>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400">
-              Filters:{" "}
-              {[
-                filterMode !== "all" ? filterMode : null,
-                search ? "search" : null,
-                showAdvanced ? "advanced" : null,
-              ]
-                .filter(Boolean)
-                .join(", ") || "none"}
-            </span>
-          </div>
-        </div>
+            <div className="mt-4 space-y-3">
+              {tiers.map((tier) => {
+                const expanded = expandedTierId === tier.id;
+                return (
+                  <div
+                    key={tier.id}
+                    className={[
+                      "rounded-lg border bg-[#151927] transition",
+                      expanded
+                        ? "border-[#2563eb] shadow-[0_0_0_1px_rgba(37,99,235,0.6)]"
+                        : "border-transparent",
+                    ].join(" ")}
+                  >
+                    {/* header row */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedTierId(
+                          expanded ? "" : tier.id
+                        )
+                      }
+                      className="flex w-full items-center justify-between px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <TierIcon tierId={tier.id} />
+                        <div className="text-left">
+                          <p className="text-xs font-semibold text-slate-100">
+                            {tier.label}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {tier.description}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-md bg-slate-900 px-2 py-1">
+                        {expanded ? (
+                          <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                        )}
+                      </div>
+                    </button>
 
-        {visibleAchievements.length === 0 ? (
-          <EmptyState
-            onReset={() => {
-              setFilterMode("all");
-              setSearch("");
-              setShowAdvanced(false);
-              setShowProgress(true);
-              setShowRarity(true);
-              setShowTierBadges(true);
-              setCompactMode(false);
-            }}
-          />
-        ) : (
-          <div
-            className={[
-              "grid gap-3",
-              compactMode ? "md:grid-cols-2 xl:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-2",
-            ].join(" ")}
-          >
-            {visibleAchievements.map((a) => (
-              <AchievementCard
-                key={a.id}
-                achievement={a}
-                showProgress={showProgress}
-                showRarity={showRarity}
-                showTierBadges={showTierBadges}
-                compact={compactMode}
+                    {/* expanded body */}
+                    {expanded && (
+                      <div className="border-t border-slate-800 px-4 pb-4 pt-3">
+                        {/* customize badge + count */}
+                        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <button className="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800">
+                            Customize badge
+                          </button>
+
+                          <div className="w-full max-w-xs space-y-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                              Count
+                            </p>
+                            <input
+                              type="number"
+                              value={tier.count}
+                              onChange={(e) =>
+                                handleTierChange(tier.id, {
+                                  count: Number(e.target.value || 0),
+                                })
+                              }
+                              className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 outline-none focus:border-slate-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* rewards */}
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            Rewards
+                          </p>
+
+                          <div className="space-y-2">
+                            <RewardToggleRow
+                              label="Give a role for achieving"
+                              enabled={tier.rewards.giveRole}
+                              onChange={() =>
+                                handleTierRewardToggle(
+                                  tier.id,
+                                  "giveRole"
+                                )
+                              }
+                            />
+                            <RewardToggleRow
+                              label="Remove a role for achieving"
+                              enabled={tier.rewards.removeRole}
+                              onChange={() =>
+                                handleTierRewardToggle(
+                                  tier.id,
+                                  "removeRole"
+                                )
+                              }
+                            />
+                            <RewardToggleRow
+                              label="Give XP for achieving"
+                              enabled={tier.rewards.giveXP}
+                              onChange={() =>
+                                handleTierRewardToggle(
+                                  tier.id,
+                                  "giveXP"
+                                )
+                              }
+                            />
+                            <RewardToggleRow
+                              label="Give coins for achieving"
+                              enabled={tier.rewards.giveCoins}
+                              onChange={() =>
+                                handleTierRewardToggle(
+                                  tier.id,
+                                  "giveCoins"
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* SETTINGS */}
+          <section className="rounded-xl border border-slate-900 bg-[#10141f] p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-100">
+                Settings
+              </p>
+              {/* little collapse icon slot like in screenshot – static for now */}
+              <ChevronUp className="h-3.5 w-3.5 text-slate-500" />
+            </div>
+
+            <div className="space-y-3">
+              <SettingRow
+                label="Don't track past progress"
+                description="Only track progress from now on, not past activity"
+                enabled={settings.dontTrackPast}
+                onToggle={(value) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    dontTrackPast: value,
+                  }))
+                }
               />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
-/**
- * ---------------------------------------------------------------------------
- *  HELPER FUNCTIONS
- * ---------------------------------------------------------------------------
- */
+              <SettingRow
+                label="Set deadline"
+                description="Great for seasonal events—achievement ends on your chosen date"
+                enabled={settings.setDeadline}
+                onToggle={(value) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    setDeadline: value,
+                  }))
+                }
+                extra={
+                  <input
+                    type="date"
+                    value={settings.deadline}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        deadline: e.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full max-w-xs rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 outline-none focus:border-slate-500"
+                  />
+                }
+              />
 
-function tierRank(tier) {
-  switch (tier) {
-    case "bronze":
-      return 1;
-    case "silver":
-      return 2;
-    case "gold":
-      return 3;
-    case "diamond":
-      return 4;
-    default:
-      return 0;
-  }
-}
-
-function labelForCategory(id) {
-  const found = CATEGORY_TABS.find((t) => t.id === id);
-  return found?.label ?? "All";
-}
-
-/**
- * ---------------------------------------------------------------------------
- *  SMALL / SUB COMPONENTS
- * ---------------------------------------------------------------------------
- */
-
-function StatCard({ label, value, sub, accent = "default" }) {
-  let accentClasses = "border-slate-800 bg-slate-950 text-slate-200";
-  if (accent === "emerald") {
-    accentClasses =
-      "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
-  } else if (accent === "warning") {
-    accentClasses = "border-yellow-500/40 bg-yellow-500/10 text-yellow-200";
-  } else if (accent === "tier") {
-    accentClasses = "border-sky-500/40 bg-sky-500/10 text-sky-200";
-  }
-
-  return (
-    <div
-      className={`flex flex-col justify-between rounded-xl border px-3 py-2.5 text-xs ${accentClasses}`}
-    >
-      <span className="text-[11px] text-slate-400">{label}</span>
-      <div className="mt-1 flex items-baseline justify-between gap-2">
-        <span className="text-lg font-semibold">{value}</span>
-        {sub && <span className="text-[11px] text-slate-500">{sub}</span>}
-      </div>
-    </div>
-  );
-}
-
-function TierRow({ tier, label, count, description }) {
-  let pillClasses = "";
-  if (tier === "bronze") {
-    pillClasses =
-      "border-amber-500/60 bg-amber-500/10 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.25)]";
-  } else if (tier === "silver") {
-    pillClasses =
-      "border-slate-400/70 bg-slate-600/20 text-slate-100 shadow-[0_0_10px_rgba(148,163,184,0.25)]";
-  } else if (tier === "gold") {
-    pillClasses =
-      "border-yellow-400/80 bg-yellow-500/15 text-yellow-100 shadow-[0_0_12px_rgba(250,204,21,0.4)]";
-  } else if (tier === "diamond") {
-    pillClasses =
-      "border-cyan-400/80 bg-cyan-500/15 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.45)]";
-  }
-
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/95 p-2.5">
-      <div className="flex items-center gap-2">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${pillClasses}`}
-        >
-          <Star className="h-3 w-3" />
-          {label.toUpperCase()}
-        </span>
-        <span className="text-[11px] text-slate-400">
-          {description}
-        </span>
-      </div>
-      <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] text-slate-400">
-        {count} total
-      </span>
-    </div>
-  );
-}
-
-function SortChip({ sortMode, setSortMode }) {
-  const [open, setOpen] = useState(false);
-
-  const active = SORT_MODES.find((s) => s.id === sortMode);
-
-  return (
-    <div className="relative text-xs">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-300 hover:bg-slate-900"
-      >
-        <span className="text-slate-500">Sort:</span>
-        <span className="font-medium text-slate-100">
-          {active?.label ?? "Recommended"}
-        </span>
-        <ChevronDown
-          className={`h-3 w-3 text-slate-400 transition ${
-            open ? "rotate-180" : "rotate-0"
-          }`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-30 mt-1 w-52 rounded-xl border border-slate-800 bg-slate-950/95 p-1 text-xs text-slate-200 shadow-xl backdrop-blur">
-          {SORT_MODES.map((mode) => {
-            const isActive = mode.id === sortMode;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => {
-                  setSortMode(mode.id);
-                  setOpen(false);
-                }}
-                className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition ${
-                  isActive
-                    ? "bg-emerald-500/10 text-emerald-300"
-                    : "hover:bg-slate-900"
-                }`}
-              >
-                <span>{mode.label}</span>
-                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
-              </button>
-            );
-          })}
+              <SettingRow
+                label="Send 'Almost there'"
+                description="Notify members at 75% progress toward this achievement"
+                enabled={settings.almostThere}
+                onToggle={(value) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    almostThere: value,
+                  }))
+                }
+              />
+            </div>
+          </section>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function ToggleRow({ label, description, enabled, onChange }) {
+// ---------------------------------------------------------------------------
+// SMALL COMPONENTS
+// ---------------------------------------------------------------------------
+
+function Toggle({ enabled, onChange }) {
   return (
     <button
       type="button"
       onClick={() => onChange(!enabled)}
-      className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-left text-[11px] text-slate-300 hover:bg-slate-900"
+      className="inline-flex items-center rounded-full bg-slate-800 px-1 py-0.5 text-[10px]"
     >
-      <div className="flex-1">
-        <p className="font-medium text-slate-100">{label}</p>
-        {description && (
-          <p className="mt-0.5 text-[10px] text-slate-500">
-            {description}
-          </p>
-        )}
-      </div>
-      <Switch enabled={enabled} />
+      <span
+        className={[
+          "mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+          enabled
+            ? "bg-[#2563eb] text-white"
+            : "bg-slate-700 text-slate-300",
+        ].join(" ")}
+      >
+        {enabled ? "ON" : "OFF"}
+      </span>
+      <span className="h-4 w-7 rounded-full bg-slate-900">
+        <span
+          className={[
+            "block h-4 w-4 rounded-full bg-white shadow transition-transform",
+            enabled ? "translate-x-3" : "translate-x-0",
+          ].join(" ")}
+        />
+      </span>
     </button>
   );
 }
 
-function Switch({ enabled }) {
+function RewardToggleRow({ label, enabled, onChange }) {
   return (
-    <span
-      className={[
-        "relative inline-flex h-4.5 w-8 items-center rounded-full border transition",
-        enabled
-          ? "border-emerald-500 bg-emerald-500/30"
-          : "border-slate-600 bg-slate-800",
-      ].join(" ")}
-    >
-      <span
-        className={[
-          "inline-block h-3 w-3 rounded-full bg-white shadow transition-transform",
-          enabled ? "translate-x-[18px]" : "translate-x-[2px]",
-        ].join(" ")}
-      />
-    </span>
-  );
-}
-
-function EmptyState({ onReset }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/80 px-4 py-10 text-center">
-      <p className="text-sm font-medium text-slate-200">
-        No achievements match your filters.
-      </p>
-      <p className="text-xs text-slate-400">
-        Try switching category, removing filters, or showing all achievements.
-      </p>
-      <button
-        onClick={onReset}
-        className="mt-2 inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-900"
-      >
-        <X className="h-3 w-3" />
-        <span>Reset filters</span>
-      </button>
+    <div className="flex items-center justify-between gap-4 rounded-md bg-[#1a1f2e] px-3 py-2">
+      <p className="text-[11px] text-slate-200">{label}</p>
+      <Toggle enabled={enabled} onChange={onChange} />
     </div>
   );
 }
 
-function AchievementCard({
-  achievement,
-  showProgress,
-  showRarity,
-  showTierBadges,
-  compact,
-}) {
-  const pct = Math.min(
-    100,
-    Math.round((achievement.progress / Math.max(achievement.goal, 1)) * 100)
-  );
-
-  // Tier badge style
-  let tierClasses = "";
-  if (achievement.tier === "bronze") {
-    tierClasses =
-      "border-amber-500/60 bg-amber-500/10 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.35)]";
-  } else if (achievement.tier === "silver") {
-    tierClasses =
-      "border-slate-400/70 bg-slate-600/25 text-slate-50 shadow-[0_0_10px_rgba(148,163,184,0.35)]";
-  } else if (achievement.tier === "gold") {
-    tierClasses =
-      "border-yellow-400/80 bg-yellow-500/15 text-yellow-100 shadow-[0_0_12px_rgba(250,204,21,0.5)]";
-  } else if (achievement.tier === "diamond") {
-    tierClasses =
-      "border-cyan-400/80 bg-cyan-500/15 text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.55)]";
-  } else {
-    tierClasses =
-      "border-slate-700 bg-slate-900 text-slate-100 shadow-[0_0_8px_rgba(15,23,42,0.7)]";
-  }
-
-  // Rarity label
-  let rarityLabel = "Common";
-  if (achievement.rarity <= 0.02) {
-    rarityLabel = "Mythic";
-  } else if (achievement.rarity <= 0.05) {
-    rarityLabel = "Ultra Rare";
-  } else if (achievement.rarity <= 0.15) {
-    rarityLabel = "Rare";
-  } else if (achievement.rarity <= 0.3) {
-    rarityLabel = "Uncommon";
-  } else {
-    rarityLabel = "Common";
-  }
-
-  let rarityColor = "text-slate-400";
-  if (rarityLabel === "Mythic") {
-    rarityColor = "text-fuchsia-300";
-  } else if (rarityLabel === "Ultra Rare") {
-    rarityColor = "text-cyan-300";
-  } else if (rarityLabel === "Rare") {
-    rarityColor = "text-indigo-300";
-  } else if (rarityLabel === "Uncommon") {
-    rarityColor = "text-emerald-300";
-  }
-
+function SettingRow({ label, description, enabled, onToggle, extra }) {
   return (
-    <div
-      className={[
-        "flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/95",
-        compact ? "p-2.5" : "p-3",
-      ].join(" ")}
-    >
-      {/* title row */}
-      <div className="flex items-start justify-between gap-2">
+    <div className="rounded-lg bg-[#151927] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-1.5">
-            <p className="text-sm font-semibold text-white">
-              {achievement.name}
-            </p>
-            {achievement.earned && (
-              <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">
-                Unlocked
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-xs text-slate-400">
-            {achievement.description}
+          <p className="text-xs font-semibold text-slate-100">
+            {label}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-400">
+            {description}
           </p>
         </div>
-
-        {showTierBadges && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tierClasses}`}
-          >
-            <Star className="h-3 w-3" />
-            {achievement.tier.toUpperCase()}
-          </span>
-        )}
+        <Toggle enabled={enabled} onChange={onToggle} />
       </div>
-
-      {/* rarity + category row */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
-        <div className="flex items-center gap-2">
-          {showRarity && (
-            <>
-              <span className={rarityColor}>{rarityLabel}</span>
-              <span className="h-0.5 w-4 rounded-full bg-slate-700" />
-              <span className="text-slate-400">
-                {(100 - Math.round(achievement.rarity * 100))}% of members
-                don&apos;t have this yet
-              </span>
-            </>
-          )}
-        </div>
-        <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-400">
-          {labelForCategory(achievement.category)}
-        </span>
-      </div>
-
-      {/* progress row */}
-      <div className="mt-1">
-        <div className="flex items-center justify-between text-[11px] text-slate-400">
-          <span>
-            {achievement.progress} / {achievement.goal}
-          </span>
-          <span
-            className={[
-              "font-medium",
-              achievement.earned ? "text-emerald-400" : "text-slate-300",
-            ].join(" ")}
-          >
-            {pct}%
-          </span>
-        </div>
-        {showProgress && (
-          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-            <div
-              className={[
-                "h-full rounded-full transition-all",
-                achievement.earned ? "bg-emerald-500" : "bg-sky-500",
-                pct >= 100 ? "shadow-[0_0_8px_rgba(16,185,129,0.7)]" : "",
-              ].join(" ")}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* footer row */}
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[10px]">
-        <div className="flex flex-wrap items-center gap-1">
-          {achievement.earned ? (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>Completed</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-1.5 py-0.5 text-slate-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-500" />
-              <span>Locked</span>
-            </span>
-          )}
-        </div>
-        <button className="rounded-lg bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-400 hover:bg-slate-800">
-          View unlock conditions
-        </button>
-      </div>
+      {extra}
     </div>
   );
+}
+
+function TierIcon({ tierId }) {
+  const base =
+    "flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold";
+
+  if (tierId === "bronze") {
+    return (
+      <div className={base + " text-amber-300 border border-amber-500/40"}>
+        🥉
+      </div>
+    );
+  }
+  if (tierId === "silver") {
+    return (
+      <div className={base + " text-slate-200 border border-slate-400/60"}>
+        🥈
+      </div>
+    );
+  }
+  if (tierId === "gold") {
+    return (
+      <div className={base + " text-yellow-200 border border-yellow-400/70"}>
+        🥇
+      </div>
+    );
+  }
+  if (tierId === "diamond") {
+    return (
+      <div className={base + " text-cyan-200 border border-cyan-400/70"}>
+        💎
+      </div>
+    );
+  }
+  return <div className={base}>🏆</div>;
 }
