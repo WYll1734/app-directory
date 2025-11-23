@@ -6,7 +6,90 @@ import { ArrowLeft, Save, ChevronDown } from "lucide-react";
 import RoleMultiSelect from "@/components/inputs/RoleMultiSelect";
 
 // ---------------------------------------------------------
-// Reusable ChannelSelect (matches your existing channel UI)
+// Emoji picker for ticket button
+// ---------------------------------------------------------
+const EMOJI_LIST = [
+  "🎫",
+  "🎟️",
+  "💬",
+  "📩",
+  "📨",
+  "🆘",
+  "🛠️",
+  "❓",
+  "📥",
+  "📞",
+  "💡",
+  "⭐",
+  "⚙️",
+  "🔧",
+  "🚨",
+  "🧾",
+];
+
+function EmojiPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function handle(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  const filtered = EMOJI_LIST.filter((emoji) =>
+    emoji.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 hover:border-indigo-500/70 hover:bg-slate-800/90 transition"
+      >
+        <span className="text-lg">{value || "🎫"}</span>
+        <ChevronDown className="h-3 w-3 text-slate-400" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 mt-1 w-48 rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-50">
+          <div className="border-b border-slate-800 p-2">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search…"
+              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-2 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div className="max-h-40 overflow-y-auto p-2 grid grid-cols-6 gap-1 text-lg">
+            {filtered.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  onChange(emoji);
+                  setOpen(false);
+                }}
+                className="flex items-center justify-center rounded-lg hover:bg-slate-800 transition"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------
+// Reusable ChannelSelect (matches your channel UI)
 // ---------------------------------------------------------
 function ChannelSelect({
   channels,
@@ -35,8 +118,8 @@ function ChannelSelect({
 
   const textChannels = channels.filter(
     (c) =>
-      // Discord text channel type === 0
-      (c.type === 0 || c.type === 15 || c.type === 5) && c.name
+      (c.type === 0 || c.type === 5 || c.type === 15) && // text/news/forum etc
+      c.name
   );
 
   const filtered = textChannels.filter((c) =>
@@ -67,8 +150,7 @@ function ChannelSelect({
               {selectedChannel.name}
             </>
           )}
-          {!loading && !error && !selectedChannel && !placeholder && "—"}
-          {!loading && !error && !selectedChannel && placeholder && placeholder}
+          {!loading && !error && !selectedChannel && placeholder}
         </span>
         <ChevronDown className="h-4 w-4 text-slate-400" />
       </button>
@@ -153,66 +235,89 @@ export default function NewTicketPanelPage({ params }) {
   const [rolesError, setRolesError] = useState("");
 
   useEffect(() => {
+    if (!guildId) return;
+
     // Load channels
     async function loadChannels() {
       try {
         setChannelsLoading(true);
+        setChannelsError("");
         const res = await fetch(
           `/api/discord/guilds/${guildId}/channels`
         );
-        const json = await res.json();
-        if (!json.ok) {
+        let json;
+        try {
+          json = await res.json();
+        } catch {
+          throw new Error("Failed to parse channels response");
+        }
+
+        if (!res.ok || json.ok === false) {
           throw new Error(json.error || "Failed to load channels");
         }
+
         setChannels(json.channels || []);
-        setChannelsError("");
       } catch (e) {
-        setChannelsError(e.message || "Failed to load channels");
+        console.error("Channels load error:", e);
+        setChannelsError("Failed to load channels.");
       } finally {
         setChannelsLoading(false);
       }
     }
 
-    // Load roles (assuming API exists at this path)
+    // Load roles
     async function loadRoles() {
       try {
         setRolesLoading(true);
+        setRolesError("");
         const res = await fetch(
-          `/api/discord/guild/${guildId}/roles`
+          `/api/discord/guilds/${guildId}/roles`
         );
-        const json = await res.json();
-        if (!json.ok) {
+        let json;
+        try {
+          json = await res.json();
+        } catch {
+          throw new Error("Failed to parse roles response");
+        }
+
+        if (!res.ok || json.ok === false) {
           throw new Error(json.error || "Failed to load roles");
         }
-        setRoles(json.roles || json.data || []);
-        setRolesError("");
+
+        setRoles(json.roles || json.data || json);
       } catch (e) {
-        setRolesError(e.message || "Failed to load roles");
+        console.error("Roles load error:", e);
+        setRolesError("Failed to load roles.");
       } finally {
         setRolesLoading(false);
       }
     }
 
-    if (guildId) {
-      loadChannels();
-      loadRoles();
-    }
+    loadChannels();
+    loadRoles();
   }, [guildId]);
 
   // =======================================================
   // PANEL + EMBED STATE
   // =======================================================
-  const [panelName, setPanelName] = useState("");
+  const [panelName, setPanelName] = useState("Support Tickets");
 
   const [embed, setEmbed] = useState({
     color: "#5865F2",
     title: "",
     description: "Click the button below to open a support ticket.",
-    footerText: "ServerMate Ticketing System", // LOCKED HERE
+    footerText: "ServerMate Ticketing System", // LOCKED
   });
 
   const updateEmbed = (field, value) =>
     setEmbed((prev) => ({ ...prev, [field]: value }));
+
+  // Ticket button text + emoji
+  const [buttonLabel, setButtonLabel] = useState("Create Ticket");
+  const [buttonEmoji, setButtonEmoji] = useState("🎫");
+
+  const previewButtonLabel = (buttonLabel || "Create Ticket").trim();
+  const previewButtonEmoji = (buttonEmoji || "").trim();
 
   // Which channels/roles we picked
   const [publishChannelId, setPublishChannelId] = useState("");
@@ -243,6 +348,23 @@ export default function NewTicketPanelPage({ params }) {
   const updateIntroEmbed = (field, value) =>
     setIntroEmbed((prev) => ({ ...prev, [field]: value }));
 
+  // Save button for intro section
+  const [introSaving, setIntroSaving] = useState(false);
+  const [introSaved, setIntroSaved] = useState(false);
+
+  const saveIntro = () => {
+    if (introSaving) return;
+    setIntroSaving(true);
+    setIntroSaved(false);
+
+    // later: API call for intro config
+    setTimeout(() => {
+      setIntroSaving(false);
+      setIntroSaved(true);
+      setTimeout(() => setIntroSaved(false), 1200);
+    }, 800);
+  };
+
   return (
     <div className="p-6 space-y-8">
       {/* =======================================================
@@ -267,7 +389,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           GENERAL SECTION (PUBLISH + TICKET MANAGER ROLES)
       ======================================================= */}
-      <div className="bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-5">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-5 overflow-visible">
         <button
           type="button"
           onClick={() => setGeneralOpen((v) => !v)}
@@ -332,7 +454,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           MAIN CARD: FORM + PREVIEW (2 COLUMN)
       ======================================================= */}
-      <div className="bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-6">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-6 overflow-visible">
         {/* Panel Name (full width) */}
         <div className="space-y-2">
           <label className="font-medium text-slate-200">Panel Name</label>
@@ -348,7 +470,7 @@ export default function NewTicketPanelPage({ params }) {
         {/* Editor + Preview grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
           {/* ---------------------------------------------------
-              LEFT: EMBED CONFIG
+              LEFT: EMBED + BUTTON CONFIG
           --------------------------------------------------- */}
           <div className="space-y-5">
             {/* Embed Color */}
@@ -385,6 +507,30 @@ export default function NewTicketPanelPage({ params }) {
                 className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 min-h-[140px]"
                 placeholder="Click the button below to open a support ticket."
               />
+            </div>
+
+            {/* Ticket Button config */}
+            <div className="space-y-2">
+              <label className="font-medium text-slate-200">
+                Ticket Button
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={buttonLabel}
+                    onChange={(e) => setButtonLabel(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500"
+                    placeholder="Create Ticket"
+                  />
+                </div>
+                <div className="sm:w-auto">
+                  <EmojiPicker
+                    value={buttonEmoji}
+                    onChange={setButtonEmoji}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Target Channel */}
@@ -458,9 +604,12 @@ export default function NewTicketPanelPage({ params }) {
                     </div>
                   </div>
 
-                  {/* Fake button */}
+                  {/* Ticket button */}
                   <button className="inline-flex items-center justify-center rounded-md bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 text-xs font-medium text-white transition">
-                    Create Ticket
+                    {previewButtonEmoji && (
+                      <span className="mr-1">{previewButtonEmoji}</span>
+                    )}
+                    <span>{previewButtonLabel}</span>
                   </button>
                 </div>
               </div>
@@ -472,7 +621,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           TICKET INTRODUCTION MESSAGE (EDITABLE + EMBED)
       ======================================================= */}
-      <div className="bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-4">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-4 overflow-visible">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-200">
             Ticket introduction message
@@ -634,12 +783,32 @@ export default function NewTicketPanelPage({ params }) {
             </div>
           </div>
         )}
+
+        {/* Save intro section */}
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={saveIntro}
+            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all
+              ${
+                introSaving
+                  ? "bg-blue-600/60 cursor-not-allowed"
+                  : introSaved
+                  ? "bg-emerald-600"
+                  : "bg-emerald-600 hover:bg-emerald-700"
+              }`}
+          >
+            {introSaving && "Saving…"}
+            {!introSaving && !introSaved && "Save introduction message"}
+            {introSaved && "Saved!"}
+          </button>
+        </div>
       </div>
 
       {/* =======================================================
           TICKET TRANSCRIPT SECTION
       ======================================================= */}
-      <div className="bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-5">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-5 overflow-visible">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-200">
             Ticket transcript
