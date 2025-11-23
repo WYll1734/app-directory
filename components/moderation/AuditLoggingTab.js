@@ -10,14 +10,19 @@ import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 export default function AuditLoggingTab({ guildId }) {
   const fetcher = (url) => fetch(url).then((r) => r.json());
 
-  const { data: channels, isLoading } = useSWR(
-    `/api/discord/guild/${guildId}/channels`,
+  // ----------------------------
+  // FETCH CHANNELS
+  // ----------------------------
+  const { data, isLoading } = useSWR(
+    `/api/discord/guilds/${guildId}/channels`,
     fetcher
   );
 
-  // --------------------
-  // REAL STATES
-  // --------------------
+  const channels = data?.channels || [];
+
+  // ----------------------------
+  // UI STATES
+  // ----------------------------
   const [loggingEnabled, setLoggingEnabled] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [ignoredChannels, setIgnoredChannels] = useState([]);
@@ -32,6 +37,11 @@ export default function AuditLoggingTab({ guildId }) {
   const [eventMsgUpdate, setEventMsgUpdate] = useState(false);
   const [eventMsgDelete, setEventMsgDelete] = useState(false);
   const [eventInvite, setEventInvite] = useState(false);
+
+  // Channel events
+  const [eventChannelCreate, setEventChannelCreate] = useState(false);
+  const [eventChannelUpdate, setEventChannelUpdate] = useState(false);
+  const [eventChannelDelete, setEventChannelDelete] = useState(false);
 
   // Member events
   const [eventNick, setEventNick] = useState(false);
@@ -59,146 +69,163 @@ export default function AuditLoggingTab({ guildId }) {
   const [ignoreBots, setIgnoreBots] = useState(true);
   const [noThumbnails, setNoThumbnails] = useState(false);
 
-  if (isLoading || !channels)
-    return <p className="text-slate-300">Loading channels…</p>;
+  if (isLoading)
+    return <p className="text-slate-300 animate-pulse">Loading channels…</p>;
 
+  // ----------------------------
+  // COMPONENT START
+  ------------------------------
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+
+      {/* =====================================================
+         HEADER
+      ===================================================== */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
         <div>
-          <h2 className="text-xl font-semibold text-slate-50">Audit Logging</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Configure what events should be logged.
+          <h1 className="text-2xl font-semibold text-slate-50">Audit Logging</h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Choose what events ServerMate should log.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-300">Active</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-300">Enabled</span>
           <Toggle value={loggingEnabled} onChange={setLoggingEnabled} />
         </div>
       </div>
 
-      {/* MAIN CARD */}
-      <section className="rounded-xl border border-slate-800 bg-slate-900/70">
-        <div className="px-6 py-6 space-y-8">
+      {/* =====================================================
+         LOGGING CHANNEL
+      ===================================================== */}
+      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-4">
+        <h3 className="font-semibold text-slate-200 text-lg">
+          Logging Destination
+        </h3>
 
-          {/* Logging channel */}
-          <div className="space-y-2">
-            <label className="text-xs text-slate-300">
-              Logging Channel <span className="text-red-400">*</span>
-            </label>
+        <p className="text-sm text-slate-400 max-w-xl">
+          Choose the channel where logs will be sent.
+        </p>
 
-            <ChannelDropdown
-              channels={channels}
-              value={selectedChannel}
-              onChange={setSelectedChannel}
-            />
+        <ChannelDropdown
+          channels={channels}
+          value={selectedChannel}
+          onChange={setSelectedChannel}
+        />
+      </section>
+
+      {/* =====================================================
+         EVENT GROUPS
+      ===================================================== */}
+      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6">
+        <div className="grid gap-12 md:grid-cols-2">
+
+          {/* LEFT SIDE */}
+          <div className="space-y-8">
+
+            {/* Moderation */}
+            <EventGroup title="Moderation Events">
+              <ToggleRow label="Member muted" value={eventMute} onChange={setEventMute} />
+              <ToggleRow label="Member unmuted" value={eventUnmute} onChange={setEventUnmute} />
+              <ToggleRow label="Moderation ban" value={eventBan} onChange={setEventBan} />
+              <ToggleRow label="Moderation unban" value={eventUnban} onChange={setEventUnban} />
+            </EventGroup>
+
+            {/* Messages */}
+            <EventGroup title="Message Events">
+              <ToggleRow label="Message updated" value={eventMsgUpdate} onChange={setEventMsgUpdate} />
+              <ToggleRow label="Message deleted" value={eventMsgDelete} onChange={setEventMsgDelete} />
+              <ToggleRow label="Invite posted" value={eventInvite} onChange={setEventInvite} />
+            </EventGroup>
+
+            {/* Channels */}
+            <EventGroup title="Channel Events">
+              <ToggleRow label="Channel created" value={eventChannelCreate} onChange={setEventChannelCreate} />
+              <ToggleRow label="Channel updated" value={eventChannelUpdate} onChange={setEventChannelUpdate} />
+              <ToggleRow label="Channel deleted" value={eventChannelDelete} onChange={setEventChannelDelete} />
+            </EventGroup>
+
           </div>
 
-          {/* Event Groups */}
-          <div className="grid gap-10 md:grid-cols-2">
+          {/* RIGHT SIDE */}
+          <div className="space-y-8">
 
-            {/* LEFT SIDE */}
-            <div className="space-y-8">
-              {/* Moderation Events */}
-              <EventGroup title="Moderation Events">
-                <ToggleRow label="Member muted" value={eventMute} onChange={setEventMute} />
-                <ToggleRow label="Member unmuted" value={eventUnmute} onChange={setEventUnmute} />
-                <ToggleRow label="Moderation ban" value={eventBan} onChange={setEventBan} />
-                <ToggleRow label="Moderation unban" value={eventUnban} onChange={setEventUnban} />
-              </EventGroup>
+            {/* Member */}
+            <EventGroup title="Member Events">
+              <ToggleRow label="Nickname changed" value={eventNick} onChange={setEventNick} />
+              <ToggleRow label="Member banned" value={eventMemberBan} onChange={setEventMemberBan} />
+              <ToggleRow label="Member joined server" value={eventJoin} onChange={setEventJoin} />
+              <ToggleRow label="Member left server" value={eventLeave} onChange={setEventLeave} />
+              <ToggleRow label="Member unbanned" value={eventMemberUnban} onChange={setEventMemberUnban} />
+              <ToggleRow label="User updated" value={eventUserUpdate} onChange={setEventUserUpdate} />
+            </EventGroup>
 
-              {/* Message Events */}
-              <EventGroup title="Message Events">
-                <ToggleRow label="Message updated" value={eventMsgUpdate} onChange={setEventMsgUpdate} />
-                <ToggleRow label="Message deleted" value={eventMsgDelete} onChange={setEventMsgDelete} />
-                <ToggleRow label="Invite posted" value={eventInvite} onChange={setEventInvite} />
-              </EventGroup>
+            {/* Roles */}
+            <EventGroup title="Role Events">
+              <ToggleRow label="Role created" value={eventRoleCreate} onChange={setEventRoleCreate} />
+              <ToggleRow label="Role updated" value={eventRoleUpdate} onChange={setEventRoleUpdate} />
+              <ToggleRow label="Role deleted" value={eventRoleDelete} onChange={setEventRoleDelete} />
+              <ToggleRow label="Member roles changed" value={eventRoleMemberChange} onChange={setEventRoleMemberChange} />
+            </EventGroup>
 
-              {/* Channel Events */}
-              <EventGroup title="Channel Events">
-                <ToggleRow label="Channel created" value={eventRoleCreate} onChange={setEventRoleCreate} />
-                <ToggleRow label="Channel updated" value={eventRoleUpdate} onChange={setEventRoleUpdate} />
-                <ToggleRow label="Channel deleted" value={eventRoleDelete} onChange={setEventRoleDelete} />
-              </EventGroup>
-            </div>
+            {/* Voice */}
+            <EventGroup title="Voice Events">
+              <ToggleRow label="Joined voice channel" value={eventVoiceJoin} onChange={setEventVoiceJoin} />
+              <ToggleRow label="Left voice channel" value={eventVoiceLeave} onChange={setEventVoiceLeave} />
+            </EventGroup>
 
-            {/* RIGHT SIDE */}
-            <div className="space-y-8">
+            {/* Server */}
+            <EventGroup title="Server Events">
+              <ToggleRow label="Server updated" value={eventServerEdit} onChange={setEventServerEdit} />
+              <ToggleRow label="Emoji updated" value={eventEmojiUpdate} onChange={setEventEmojiUpdate} />
+            </EventGroup>
 
-              {/* Member Events */}
-              <EventGroup title="Member Events">
-                <ToggleRow label="Nickname changed" value={eventNick} onChange={setEventNick} />
-                <ToggleRow label="Member banned" value={eventMemberBan} onChange={setEventMemberBan} />
-                <ToggleRow label="Member joined server" value={eventJoin} onChange={setEventJoin} />
-                <ToggleRow label="Member left server" value={eventLeave} onChange={setEventLeave} />
-                <ToggleRow label="Member unbanned" value={eventMemberUnban} onChange={setEventMemberUnban} />
-                <ToggleRow label="User updated" value={eventUserUpdate} onChange={setEventUserUpdate} />
-              </EventGroup>
-
-              {/* Role Events */}
-              <EventGroup title="Role Events">
-                <ToggleRow label="Role created" value={eventRoleCreate} onChange={setEventRoleCreate} />
-                <ToggleRow label="Role updated" value={eventRoleUpdate} onChange={setEventRoleUpdate} />
-                <ToggleRow label="Role deleted" value={eventRoleDelete} onChange={setEventRoleDelete} />
-                <ToggleRow label="Member roles changed" value={eventRoleMemberChange} onChange={setEventRoleMemberChange} />
-              </EventGroup>
-
-              {/* Voice Events */}
-              <EventGroup title="Voice Events">
-                <ToggleRow label="Member joined voice channel" value={eventVoiceJoin} onChange={setEventVoiceJoin} />
-                <ToggleRow label="Member left voice channel" value={eventVoiceLeave} onChange={setEventVoiceLeave} />
-              </EventGroup>
-
-              {/* Server Events */}
-              <EventGroup title="Server Events">
-                <ToggleRow label="Server edited" value={eventServerEdit} onChange={setEventServerEdit} />
-                <ToggleRow label="Emojis updated" value={eventEmojiUpdate} onChange={setEventEmojiUpdate} />
-              </EventGroup>
-
-            </div>
           </div>
+
         </div>
       </section>
 
-      {/* IGNORED */}
-      <section className="rounded-xl border border-slate-800 bg-slate-900/70">
-        <div className="px-6 py-6 space-y-6">
-          <div>
-            <h3 className="text-base font-semibold text-slate-50">Ignored Channels</h3>
-            <p className="text-xs text-slate-400 max-w-xl">
-              Messages updated/deleted in these channels will be ignored.
-            </p>
-          </div>
+      {/* =====================================================
+         IGNORED CHANNELS
+      ===================================================== */}
+      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 space-y-5">
+        <div>
+          <h3 className="font-semibold text-slate-200 text-lg">
+            Ignored Channels
+          </h3>
+          <p className="text-sm text-slate-400 max-w-xl">
+            Messages deleted/edited in these channels will not be logged.
+          </p>
+        </div>
 
-          <ChannelMultiSelect
-            channels={channels}
-            values={ignoredChannels}
-            onChange={setIgnoredChannels}
-          />
+        <ChannelMultiSelect
+          channels={channels}
+          values={ignoredChannels}
+          onChange={setIgnoredChannels}
+        />
 
-          {/* Additional Settings */}
-          <div className="space-y-3">
-            <p className="text-xs text-slate-400 uppercase tracking-wide">
-              Additional settings
-            </p>
+        <div className="space-y-3 pt-4 border-t border-slate-800">
+          <p className="text-xs text-slate-500 uppercase tracking-wide">Additional Settings</p>
 
-            <ToggleRow label="Don't log actions made by bots" value={ignoreBots} onChange={setIgnoreBots} />
-            <ToggleRow label="Don't display user thumbnails" value={noThumbnails} onChange={setNoThumbnails} />
-          </div>
+          <ToggleRow label="Ignore bot actions" value={ignoreBots} onChange={setIgnoreBots} />
+          <ToggleRow label="Disable user thumbnails" value={noThumbnails} onChange={setNoThumbnails} />
         </div>
       </section>
+
     </div>
   );
 }
 
-/* ---------------------- REUSABLE COMPONENTS ---------------------- */
+/* =====================================================
+   REUSABLE COMPONENTS
+===================================================== */
 
 function EventGroup({ title, children }) {
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-slate-200 uppercase tracking-wide">{title}</p>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+        {title}
+      </p>
       <div className="space-y-2">{children}</div>
     </div>
   );
@@ -206,9 +233,11 @@ function EventGroup({ title, children }) {
 
 function ToggleRow({ label, value, onChange }) {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4 group">
       <Toggle value={value} onChange={onChange} />
-      <span className="text-sm text-slate-200">{label}</span>
+      <span className="text-sm text-slate-200 group-hover:text-white transition">
+        {label}
+      </span>
     </div>
   );
 }
