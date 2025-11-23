@@ -2,28 +2,31 @@
 
 import { useEffect, useState } from "react";
 
-// --- SMALL SAVE BUTTON ---
-function SaveButton({ onClick, saving, saved }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={saving}
-      className={`mt-4 rounded-lg px-4 py-2 text-sm font-semibold transition
-        ${
-          saved
-            ? "bg-emerald-600 text-white"
-            : "bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60"
-        }`}
-    >
-      {saving ? "Saving…" : saved ? "Saved ✓" : "Save"}
-    </button>
-  );
-}
-
 export default function WelcomeChannelPage({ params }) {
   const { guildId } = params;
 
+  // =========================================
+  // SAVE BUTTON STATE (Save → Saving → Saved)
+  // =========================================
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const runSave = () => {
+    if (saving) return;
+    setSaving(true);
+    setSaved(false);
+
+    setTimeout(() => {
+      setSaving(false);
+      setSaved(true);
+
+      setTimeout(() => setSaved(false), 1300);
+    }, 900);
+  };
+
+  // =========================================
   // EMBED STATE
+  // =========================================
   const [embed, setEmbed] = useState({
     color: "#5865F2",
     title: "",
@@ -37,48 +40,29 @@ export default function WelcomeChannelPage({ params }) {
     footerIcon: "",
   });
 
-  const update = (key, value) =>
-    setEmbed((prev) => ({ ...prev, [key]: value }));
+  const update = (field, value) =>
+    setEmbed((prev) => ({ ...prev, [field]: value }));
 
-  // CHANNEL DROPDOWN STATE
+  // =========================================
+  // CHANNEL SELECT DROPDOWN (API)
+  // =========================================
   const [channels, setChannels] = useState([]);
   const [loadingChannels, setLoadingChannels] = useState(true);
-  const [selectedChannel, setSelectedChannel] = useState("create");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState("create");
 
-  // SAVE BUTTON STATE
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  // SAVE HANDLER
-  function handleSave() {
-    if (saving) return;
-    setSaving(true);
-    setSaved(false);
-
-    setTimeout(() => {
-      setSaving(false);
-      setSaved(true);
-
-      setTimeout(() => setSaved(false), 1500);
-    }, 900);
-  }
-
-  // FETCH CHANNELS FROM API
   useEffect(() => {
-    async function fetchChannels() {
+    async function getChannels() {
       try {
         const res = await fetch(`/api/discord/guilds/${guildId}/channels`);
         const data = await res.json();
         if (data.ok) setChannels(data.channels);
-        else console.error("Channel fetch failed:", data);
-      } catch (err) {
-        console.error("Channel fetch error:", err);
-      } finally {
-        setLoadingChannels(false);
+      } catch (e) {
+        console.error(e);
       }
+      setLoadingChannels(false);
     }
-    fetchChannels();
+    getChannels();
   }, [guildId]);
 
   const presetColors = [
@@ -90,20 +74,24 @@ export default function WelcomeChannelPage({ params }) {
     "#2B2D31",
   ];
 
+  // =========================================
+  // PAGE RENDER
+  // =========================================
   return (
     <div className="space-y-8">
+
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">
-            Welcome Channel
-          </h1>
+          <h1 className="text-xl font-semibold text-slate-100">Welcome Channel</h1>
           <p className="text-sm text-slate-400">
             A dedicated place to welcome new members and share essential information.
           </p>
         </div>
 
-        <SaveButton onClick={handleSave} saving={saving} saved={saved} />
+        <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
+          Publish
+        </button>
       </div>
 
       {/* CHANNEL SELECTOR */}
@@ -114,9 +102,8 @@ export default function WelcomeChannelPage({ params }) {
 
         <div className="mt-4 relative">
           <button
-            type="button"
-            onClick={() => setDropdownOpen((o) => !o)}
-            className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/70 px-4 py-2 text-left text-sm text-slate-200"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/70 px-4 py-2 text-sm text-slate-200"
           >
             <span>
               {selectedChannel === "create"
@@ -128,7 +115,7 @@ export default function WelcomeChannelPage({ params }) {
 
           {dropdownOpen && (
             <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 shadow-xl max-h-72 overflow-y-auto text-sm">
-              {/* LOADING */}
+
               {loadingChannels && (
                 <div className="px-4 py-3 text-xs text-slate-400">
                   Loading channels...
@@ -137,27 +124,25 @@ export default function WelcomeChannelPage({ params }) {
 
               {/* CREATE OPTION */}
               <button
-                type="button"
-                onClick={() => {
-                  setSelectedChannel("create");
-                  setDropdownOpen(false);
-                }}
                 className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
                   selectedChannel === "create"
                     ? "text-indigo-400"
                     : "text-slate-200"
                 }`}
+                onClick={() => {
+                  setSelectedChannel("create");
+                  setDropdownOpen(false);
+                }}
               >
-                <span>Create #welcome channel (recommended)</span>
+                Create #welcome channel (recommended)
                 {selectedChannel === "create" && (
                   <span className="text-xs text-indigo-400">Selected</span>
                 )}
               </button>
 
-              {/* CATEGORY GROUPS */}
+              {/* CATEGORIES */}
               {channels
                 .filter((c) => c.type === 4)
-                .sort((a, b) => a.position - b.position)
                 .map((cat) => (
                   <div key={cat.id}>
                     <p className="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider text-slate-500">
@@ -166,22 +151,20 @@ export default function WelcomeChannelPage({ params }) {
 
                     {channels
                       .filter((ch) => ch.parent_id === cat.id && ch.type === 0)
-                      .sort((a, b) => a.position - b.position)
                       .map((ch) => (
                         <button
                           key={ch.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedChannel(`#${ch.name}`);
-                            setDropdownOpen(false);
-                          }}
                           className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
                             selectedChannel === `#${ch.name}`
                               ? "text-indigo-400"
                               : "text-slate-200"
                           }`}
+                          onClick={() => {
+                            setSelectedChannel(`#${ch.name}`);
+                            setDropdownOpen(false);
+                          }}
                         >
-                          <span>#{ch.name}</span>
+                          #{ch.name}
                           {selectedChannel === `#${ch.name}` && (
                             <span className="text-xs text-indigo-400">
                               Selected
@@ -192,25 +175,23 @@ export default function WelcomeChannelPage({ params }) {
                   </div>
                 ))}
 
-              {/* UNCATEGORIZED TEXT CHANNELS */}
+              {/* UNCATEGORIZED */}
               {channels
                 .filter((c) => c.type === 0 && !c.parent_id)
-                .sort((a, b) => a.position - b.position)
                 .map((ch) => (
                   <button
                     key={ch.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedChannel(`#${ch.name}`);
-                      setDropdownOpen(false);
-                    }}
                     className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
                       selectedChannel === `#${ch.name}`
                         ? "text-indigo-400"
                         : "text-slate-200"
                     }`}
+                    onClick={() => {
+                      setSelectedChannel(`#${ch.name}`);
+                      setDropdownOpen(false);
+                    }}
                   >
-                    <span>#{ch.name}</span>
+                    #{ch.name}
                     {selectedChannel === `#${ch.name}` && (
                       <span className="text-xs text-indigo-400">Selected</span>
                     )}
@@ -221,10 +202,7 @@ export default function WelcomeChannelPage({ params }) {
         </div>
       </section>
 
-      {/* EMBED BUILDER (UNCHANGED!) */}
-      {/* Your entire embed builder section stays exactly as you sent it */}
-
-      {/* EMBED BUILDER (FULL RESTORED) */}
+      {/* EMBED BUILDER */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
           * All fields are optional
@@ -235,7 +213,6 @@ export default function WelcomeChannelPage({ params }) {
           <label className="block text-sm font-semibold text-slate-200">
             Color
           </label>
-
           <div className="mt-2 flex items-center gap-3">
             <input
               type="color"
@@ -243,17 +220,14 @@ export default function WelcomeChannelPage({ params }) {
               onChange={(e) => update("color", e.target.value)}
               className="h-8 w-10 cursor-pointer rounded-md border border-slate-700 bg-slate-950"
             />
-
             <input
-              className="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none focus:border-indigo-500"
               value={embed.color}
               onChange={(e) => update("color", e.target.value)}
+              className="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100"
             />
-
             {presetColors.map((c) => (
               <button
                 key={c}
-                type="button"
                 onClick={() => update("color", c)}
                 style={{ backgroundColor: c }}
                 className={`h-5 w-5 rounded-full border ${
@@ -265,24 +239,24 @@ export default function WelcomeChannelPage({ params }) {
         </div>
 
         {/* TITLE + URL */}
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="text-sm text-slate-300">Title</label>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none"
-              placeholder="🍒 Welcome to {server} 🍒"
               value={embed.title}
               onChange={(e) => update("title", e.target.value)}
+              placeholder="🍒 Welcome to {server} 🍒"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
             />
           </div>
 
           <div>
             <label className="text-sm text-slate-300">Title URL</label>
             <input
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none"
-              placeholder="https://example.com"
               value={embed.url}
               onChange={(e) => update("url", e.target.value)}
+              placeholder="https://example.com"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
             />
           </div>
         </div>
@@ -291,76 +265,16 @@ export default function WelcomeChannelPage({ params }) {
         <div className="mb-6">
           <label className="text-sm text-slate-300">Description</label>
           <textarea
-            className="mt-1 h-40 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none"
-            placeholder={
-              "Welcome to {server} {username}!\n\nBe careful I heard roads are dangerous around here..."
-            }
             value={embed.description}
             onChange={(e) => update("description", e.target.value)}
+            placeholder={"Welcome to {server} {username}!"}
+            className="mt-1 h-40 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
           />
         </div>
 
-        {/* AUTHOR */}
-        <details className="group mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-          <summary className="list-none cursor-pointer text-sm text-slate-300 group-open:text-indigo-400">
-            + Author
-          </summary>
-
-          <div className="mt-3 space-y-3 text-xs text-slate-300">
-            <div>
-              <label>Author Name</label>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Enter name"
-                value={embed.authorName}
-                onChange={(e) => update("authorName", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>Author Icon</label>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Enter image URL"
-                value={embed.authorIcon}
-                onChange={(e) => update("authorIcon", e.target.value)}
-              />
-            </div>
-          </div>
-        </details>
-
-        {/* IMAGE + THUMB */}
-        <details className="group mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-          <summary className="list-none cursor-pointer text-sm text-slate-300 group-open:text-indigo-400">
-            + Image/Thumb
-          </summary>
-
-          <div className="mt-3 space-y-3 text-xs text-slate-300">
-            <div>
-              <label>Thumbnail</label>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Thumbnail URL"
-                value={embed.thumb}
-                onChange={(e) => update("thumb", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label>Main Image</label>
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Image URL"
-                value={embed.image}
-                onChange={(e) => update("image", e.target.value)}
-              />
-            </div>
-          </div>
-        </details>
-
         {/* FOOTER */}
         <details className="group mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-          <summary className="list-none cursor-pointer text-sm text-slate-300 group-open:text-indigo-400">
+          <summary className="cursor-pointer text-sm text-slate-300 group-open:text-indigo-400">
             + Footer
           </summary>
 
@@ -368,28 +282,34 @@ export default function WelcomeChannelPage({ params }) {
             <div>
               <label>Footer Text</label>
               <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Footer text"
                 value={embed.footerText}
                 onChange={(e) => update("footerText", e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
               />
             </div>
 
             <div>
               <label>Footer Icon</label>
               <input
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
-                placeholder="Icon URL"
                 value={embed.footerIcon}
                 onChange={(e) => update("footerIcon", e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
               />
             </div>
           </div>
         </details>
 
-        {/* SAVE */}
-        <button className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-          Save
+        {/* SAVE BUTTON #2 */}
+        <button
+          onClick={runSave}
+          disabled={saving}
+          className={`mt-4 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            saved
+              ? "bg-emerald-500 text-slate-900"
+              : "bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60"
+          }`}
+        >
+          {saving ? "Saving…" : saved ? "Saved!" : "Save"}
         </button>
 
         {/* PREVIEW */}
@@ -397,12 +317,10 @@ export default function WelcomeChannelPage({ params }) {
           Preview
         </h3>
 
-        <div className="mt-3 rounded-lg border border-slate-800 bg-slate-95
-0 p-4">
+        <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950 p-4">
           <p className="text-sm text-slate-400">
             <span className="font-semibold text-slate-100">ServerMate Bot</span> • Today
           </p>
-
           <div className="mt-3 flex gap-3">
             <div
               className="flex-1 rounded-lg border border-slate-700 bg-slate-900 p-4"
@@ -411,76 +329,19 @@ export default function WelcomeChannelPage({ params }) {
                 borderLeftColor: embed.color,
               }}
             >
-              {/* AUTHOR */}
-              {embed.authorName && (
-                <div className="mb-2 flex items-center gap-2 text-xs text-slate-300">
-                  {embed.authorIcon && (
-                    <div
-                      className="h-5 w-5 rounded-full bg-slate-700 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${embed.authorIcon})` }}
-                    />
-                  )}
-                  <span>{embed.authorName}</span>
-                </div>
-              )}
-
-              {/* TITLE */}
               {embed.title && (
-                <p className="text-sm font-semibold text-slate-100">
-                  {embed.url ? (
-                    <a
-                      href={embed.url}
-                      className="text-sky-400 hover:underline"
-                      target="_blank"
-                    >
-                      {embed.title}
-                    </a>
-                  ) : (
-                    embed.title
-                  )}
-                </p>
+                <p className="text-sm font-semibold text-slate-100">{embed.title}</p>
               )}
-
-              {/* DESCRIPTION */}
               {embed.description && (
                 <p className="mt-2 whitespace-pre-line text-slate-300">
                   {embed.description}
                 </p>
               )}
-
-              {/* IMAGE */}
-              {embed.image && (
-                <div
-                  className="mt-3 h-32 rounded-md bg-slate-800 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${embed.image})` }}
-                />
-              )}
-
-              {/* FOOTER */}
-              {(embed.footerText || embed.footerIcon) && (
-                <div className="mt-3 flex items-center gap-2 border-t border-slate-800 pt-2 text-[11px] text-slate-400">
-                  {embed.footerIcon && (
-                    <div
-                      className="h-4 w-4 rounded-full bg-slate-700 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${embed.footerIcon})` }}
-                    />
-                  )}
-                  <span>{embed.footerText}</span>
-                </div>
-              )}
             </div>
-
-            {/* THUMB */}
-            {embed.thumb && (
-              <div
-                className="h-16 w-16 rounded-md bg-slate-800 bg-cover bg-center shrink-0 mt-1"
-                style={{ backgroundImage: `url(${embed.thumb})` }}
-              />
-            )}
           </div>
         </div>
-      </section>
 
+      </section>
     </div>
   );
 }
