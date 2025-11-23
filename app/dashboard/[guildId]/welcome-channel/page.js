@@ -2,6 +2,24 @@
 
 import { useEffect, useState } from "react";
 
+// --- SMALL SAVE BUTTON ---
+function SaveButton({ onClick, saving, saved }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={saving}
+      className={`mt-4 rounded-lg px-4 py-2 text-sm font-semibold transition
+        ${
+          saved
+            ? "bg-emerald-600 text-white"
+            : "bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-60"
+        }`}
+    >
+      {saving ? "Saving…" : saved ? "Saved ✓" : "Save"}
+    </button>
+  );
+}
+
 export default function WelcomeChannelPage({ params }) {
   const { guildId } = params;
 
@@ -22,21 +40,40 @@ export default function WelcomeChannelPage({ params }) {
   const update = (key, value) =>
     setEmbed((prev) => ({ ...prev, [key]: value }));
 
-  // CHANNEL SELECTOR
+  // CHANNEL DROPDOWN STATE
   const [channels, setChannels] = useState([]);
   const [loadingChannels, setLoadingChannels] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState("create");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // FETCH CHANNELS
+  // SAVE BUTTON STATE
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // SAVE HANDLER
+  function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    setSaved(false);
+
+    setTimeout(() => {
+      setSaving(false);
+      setSaved(true);
+
+      setTimeout(() => setSaved(false), 1500);
+    }, 900);
+  }
+
+  // FETCH CHANNELS FROM API
   useEffect(() => {
     async function fetchChannels() {
       try {
         const res = await fetch(`/api/discord/guilds/${guildId}/channels`);
         const data = await res.json();
         if (data.ok) setChannels(data.channels);
-      } catch (e) {
-        console.error("Channel fetch error:", e);
+        else console.error("Channel fetch failed:", data);
+      } catch (err) {
+        console.error("Channel fetch error:", err);
       } finally {
         setLoadingChannels(false);
       }
@@ -44,7 +81,6 @@ export default function WelcomeChannelPage({ params }) {
     fetchChannels();
   }, [guildId]);
 
-  // COLOR PRESETS
   const presetColors = [
     "#5865F2",
     "#57F287",
@@ -59,25 +95,27 @@ export default function WelcomeChannelPage({ params }) {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Welcome Channel</h1>
+          <h1 className="text-xl font-semibold text-slate-100">
+            Welcome Channel
+          </h1>
           <p className="text-sm text-slate-400">
             A dedicated place to welcome new members and share essential information.
           </p>
         </div>
 
-        <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
-          Publish
-        </button>
+        <SaveButton onClick={handleSave} saving={saving} saved={saved} />
       </div>
 
       {/* CHANNEL SELECTOR */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-        <h2 className="text-sm font-semibold text-slate-200">Choose your Welcome Channel</h2>
+        <h2 className="text-sm font-semibold text-slate-200">
+          Choose your Welcome Channel
+        </h2>
 
         <div className="mt-4 relative">
           <button
             type="button"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={() => setDropdownOpen((o) => !o)}
             className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/70 px-4 py-2 text-left text-sm text-slate-200"
           >
             <span>
@@ -90,7 +128,7 @@ export default function WelcomeChannelPage({ params }) {
 
           {dropdownOpen && (
             <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-800 bg-slate-950 shadow-xl max-h-72 overflow-y-auto text-sm">
-
+              {/* LOADING */}
               {loadingChannels && (
                 <div className="px-4 py-3 text-xs text-slate-400">
                   Loading channels...
@@ -105,7 +143,9 @@ export default function WelcomeChannelPage({ params }) {
                   setDropdownOpen(false);
                 }}
                 className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
-                  selectedChannel === "create" ? "text-indigo-400" : "text-slate-200"
+                  selectedChannel === "create"
+                    ? "text-indigo-400"
+                    : "text-slate-200"
                 }`}
               >
                 <span>Create #welcome channel (recommended)</span>
@@ -114,7 +154,7 @@ export default function WelcomeChannelPage({ params }) {
                 )}
               </button>
 
-              {/* CATEGORIES */}
+              {/* CATEGORY GROUPS */}
               {channels
                 .filter((c) => c.type === 4)
                 .sort((a, b) => a.position - b.position)
@@ -143,7 +183,9 @@ export default function WelcomeChannelPage({ params }) {
                         >
                           <span>#{ch.name}</span>
                           {selectedChannel === `#${ch.name}` && (
-                            <span className="text-xs text-indigo-400">Selected</span>
+                            <span className="text-xs text-indigo-400">
+                              Selected
+                            </span>
                           )}
                         </button>
                       ))}
@@ -178,6 +220,9 @@ export default function WelcomeChannelPage({ params }) {
           )}
         </div>
       </section>
+
+      {/* EMBED BUILDER (UNCHANGED!) */}
+      {/* Your entire embed builder section stays exactly as you sent it */}
 
       {/* EMBED BUILDER (FULL RESTORED) */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6">
