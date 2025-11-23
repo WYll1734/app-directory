@@ -4,36 +4,46 @@ import { useState, useMemo } from "react";
 import { X, Hash, Volume2, FolderIcon } from "lucide-react";
 
 export default function ChannelMultiSelect({ channels = [], values = [], onChange }) {
-  const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
-  // Remove already-selected channels from the dropdown
+  // Filter out selected channels + apply search
   const filtered = useMemo(() => {
-    const selectedIds = new Set(values.map((v) => v.id));
+    const selectedIds = new Set(values.map((c) => c.id));
 
-    const clean = channels.filter((c) => !selectedIds.has(c.id));
+    const remaining = channels.filter((c) => !selectedIds.has(c.id));
 
-    const groups = { text: [], voice: [], categories: [], other: [] };
+    return remaining.filter((c) =>
+      c.name.toLowerCase().includes(query.toLowerCase())
+    );
+  }, [channels, values, query]);
 
-    clean.forEach((ch) => {
+  // Group channels
+  const grouped = useMemo(() => {
+    const groups = {
+      text: [],
+      voice: [],
+      categories: [],
+      other: [],
+    };
+
+    filtered.forEach((ch) => {
       if (ch.type === 0) groups.text.push(ch);
       else if (ch.type === 2) groups.voice.push(ch);
       else if (ch.type === 4) groups.categories.push(ch);
       else groups.other.push(ch);
     });
 
-    const applySearch = (list) =>
-      list.filter((c) =>
-        c.name.toLowerCase().includes(query.toLowerCase())
-      );
+    return groups;
+  }, [filtered]);
 
-    return {
-      text: applySearch(groups.text),
-      voice: applySearch(groups.voice),
-      categories: applySearch(groups.categories),
-      other: applySearch(groups.other),
-    };
-  }, [channels, values, query]);
+  const addChannel = (ch) => {
+    onChange([...values, ch]);
+  };
+
+  const removeChannel = (id) => {
+    onChange(values.filter((ch) => ch.id !== id));
+  };
 
   const iconFor = (type) => {
     if (type === 2) return <Volume2 size={14} className="text-blue-300" />;
@@ -41,17 +51,9 @@ export default function ChannelMultiSelect({ channels = [], values = [], onChang
     return <Hash size={14} className="text-slate-300" />;
   };
 
-  const addChannel = (ch) => {
-    onChange([...values, ch]);
-  };
-
-  const removeChannel = (id) => {
-    onChange(values.filter((c) => c.id !== id));
-  };
-
   return (
     <div className="relative w-full">
-      {/* Selected items */}
+      {/* Selected Items */}
       <div
         onClick={() => setOpen(true)}
         className="min-h-[44px] bg-slate-800/70 border border-slate-700 rounded-lg p-2 flex flex-wrap gap-2 cursor-pointer hover:bg-slate-700/60 transition"
@@ -65,7 +67,8 @@ export default function ChannelMultiSelect({ channels = [], values = [], onChang
             key={ch.id}
             className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded-lg text-sm text-slate-200"
           >
-            {iconFor(ch.type)} #{ch.name}
+            {iconFor(ch.type)}
+            {ch.name}
             <button onClick={() => removeChannel(ch.id)}>
               <X size={14} className="text-slate-400 hover:text-red-400" />
             </button>
@@ -76,8 +79,7 @@ export default function ChannelMultiSelect({ channels = [], values = [], onChang
       {/* Dropdown */}
       {open && (
         <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
-
-          {/* Search box */}
+          {/* Search */}
           <div className="p-2 border-b border-slate-800">
             <input
               className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
@@ -87,55 +89,53 @@ export default function ChannelMultiSelect({ channels = [], values = [], onChang
             />
           </div>
 
-          {/* Section renderer */}
-          <Section
+          {/* Channel Sections */}
+          <DropdownSection
             title="TEXT CHANNELS"
-            list={filtered.text}
+            list={grouped.text}
             iconFor={iconFor}
             onSelect={addChannel}
             disabled={false}
           />
 
-          <Section
+          <DropdownSection
             title="VOICE CHANNELS"
-            list={filtered.voice}
+            list={grouped.voice}
             iconFor={iconFor}
             onSelect={addChannel}
             disabled={false}
           />
 
-          <Section
+          <DropdownSection
             title="CATEGORIES"
-            list={filtered.categories}
+            list={grouped.categories}
             iconFor={iconFor}
             onSelect={addChannel}
-            disabled={true}
+            disabled={true} // categories disabled
           />
 
-          <Section
+          <DropdownSection
             title="OTHER"
-            list={filtered.other}
+            list={grouped.other}
             iconFor={iconFor}
             onSelect={addChannel}
             disabled={false}
           />
 
-          {/* Empty */}
-          {filtered.text.length === 0 &&
-            filtered.voice.length === 0 &&
-            filtered.categories.length === 0 &&
-            filtered.other.length === 0 && (
-              <p className="text-center text-sm text-slate-500 py-3">
-                No channels found
-              </p>
-            )}
+          {filtered.length === 0 && (
+            <p className="text-center text-sm text-slate-500 py-3">
+              No channels found
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function Section({ title, list, iconFor, onSelect, disabled }) {
+/* SECTION COMPONENT --------------------------------------------------- */
+
+function DropdownSection({ title, list, iconFor, onSelect, disabled }) {
   if (!list || list.length === 0) return null;
 
   return (
@@ -163,8 +163,8 @@ function Section({ title, list, iconFor, onSelect, disabled }) {
 
         return (
           <button
-            type="button"
             key={ch.id}
+            type="button"
             onClick={() => onSelect(ch)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left rounded-md text-sm text-slate-200 hover:bg-slate-800"
           >
