@@ -58,7 +58,9 @@ export default function ServerSidebar({ guildId }) {
   };
 
   return (
-    <aside className="w-64 border-r border-slate-800 bg-slate-950/95 px-4 py-6 text-sm overflow-y-auto">
+    <aside
+      className="relative w-64 border-r border-slate-800 bg-slate-950/95 px-4 py-6 text-sm overflow-y-auto"
+    >
       <div className="mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
         Server Config
       </div>
@@ -66,12 +68,11 @@ export default function ServerSidebar({ guildId }) {
       <nav className="space-y-5">
         {sidebarSections.map((section) => (
           <div key={section.title}>
-            
             {/* SECTION HEADER */}
             <button
               onClick={() => toggleSection(section.title)}
-              className="flex w-full items-center justify-between mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] 
-                         text-slate-500 hover:text-slate-300 transition"
+              className="mb-2 flex w-full items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] 
+                         text-slate-500 transition hover:text-slate-300"
             >
               {section.title}
               <span className="text-xs">
@@ -118,7 +119,7 @@ export default function ServerSidebar({ guildId }) {
         ))}
       </nav>
 
-      {/* Small fade at bottom */}
+      {/* Small fade at bottom (now confined to the sidebar only) */}
       <div className="pointer-events-none absolute bottom-0 left-0 h-10 w-full bg-gradient-to-t from-slate-950 to-transparent" />
     </aside>
   );
