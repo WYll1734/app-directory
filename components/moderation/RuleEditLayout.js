@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import useSWR from "swr";
 
 export default function RuleEditLayout({ guildId, ruleConfig }) {
   const {
@@ -12,6 +14,29 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoExactLabel,
     demoAnyLabel,
   } = ruleConfig;
+
+  // -----------------------------------------
+  // FETCH ROLES + CHANNELS
+  // -----------------------------------------
+  const fetcher = (url) => fetch(url).then((r) => r.json());
+
+  const { data: rolesData } = useSWR(
+    `/api/discord/guild/${guildId}/roles`,
+    fetcher
+  );
+  const { data: channelsData } = useSWR(
+    `/api/discord/guild/${guildId}/channels`,
+    fetcher
+  );
+
+  const roles = rolesData || [];
+  const channels = channelsData || [];
+
+  // -----------------------------------------
+  // LOCAL STATE
+  // -----------------------------------------
+  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState("");
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,8 +80,18 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all roles except
           </label>
 
-          <select className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200">
-            <option>Select a role</option>
+          {/* REAL ROLE SELECT */}
+          <select
+            className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200"
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+          >
+            <option value="">Select a role...</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
           </select>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -76,8 +111,21 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all channels except
           </label>
 
-          <select className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200">
-            <option>Select a channel</option>
+          {/* REAL CHANNEL SELECT */}
+          <select
+            className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200"
+            value={selectedChannel}
+            onChange={(e) => setSelectedChannel(e.target.value)}
+          >
+            <option value="">Select a channel...</option>
+
+            {channels
+              .filter((c) => c.type === 0 || c.type === 5 || c.type === 15) // text / announcement / forum
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  #{c.name}
+                </option>
+              ))}
           </select>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -96,9 +144,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
       {/* Demo section */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-4">
-        <h2 className="font-semibold text-slate-200">
-          How does it work?
-        </h2>
+        <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
         <p className="text-sm text-slate-400">{demoTitle}</p>
 
