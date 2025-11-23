@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
+
+// Updated premium selectors
 import RoleMultiSelect from "@/components/inputs/RoleMultiSelect";
+import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
 export default function RuleEditLayout({ guildId, ruleConfig }) {
   const {
@@ -16,15 +19,13 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // Fetch helper
   const fetcher = (url) => fetch(url).then((r) => r.json());
 
-  // Correct API paths (guilds/***)
+  // Correct API routes (/guilds/)
   const { data: rolesData } = useSWR(
     `/api/discord/guilds/${guildId}/roles`,
     fetcher
   );
-
   const { data: channelsData } = useSWR(
     `/api/discord/guilds/${guildId}/channels`,
     fetcher
@@ -38,7 +39,8 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Top bar */}
+
+      {/* HEADER BAR */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -66,11 +68,12 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* Permissions */}
+      {/* PERMISSIONS CARD */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
+
         <h2 className="font-semibold text-slate-200">Permissions</h2>
 
-        {/* Role permissions */}
+        {/* ROLE PERMS */}
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
 
@@ -79,7 +82,6 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all roles except
           </label>
 
-          {/* Multi-Select Role Picker */}
           <RoleMultiSelect
             roles={roles}
             value={selectedRole}
@@ -92,7 +94,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           </label>
         </div>
 
-        {/* Channel permissions */}
+        {/* CHANNEL PERMS */}
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-medium text-slate-300">
             Channel permissions
@@ -103,27 +105,11 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all channels except
           </label>
 
-          {/* Channel select (real data) */}
-          <select
-            className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200"
+          <ChannelMultiSelect
+            channels={channels}
             value={selectedChannel}
-            onChange={(e) => setSelectedChannel(e.target.value)}
-          >
-            <option value="">Select a channel...</option>
-
-            {channels
-              .filter(
-                (c) =>
-                  c.type === 0 || // text
-                  c.type === 5 || // announcement
-                  c.type === 15  // forum
-              )
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  #{c.name}
-                </option>
-              ))}
-          </select>
+            onChange={setSelectedChannel}
+          />
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="channelPerms" />
@@ -132,23 +118,23 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* Additional settings (from rule config) */}
+      {/* EXTRA SETTINGS */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
         {extraFields}
       </div>
 
-      {/* Demo */}
+      {/* DEMO PREVIEW */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-4">
-        <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
+        <h2 className="font-semibold text-slate-200">How does it work?</h2>
         <p className="text-sm text-slate-400">{demoTitle}</p>
 
         <div>
           <p className="text-xs text-slate-400 mb-1">Exact match</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
             <b>ServerMate</b>
-            <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
+            <span className="ml-1 text-[11px] text-indigo-400">BOT</span>
             <br />
             {demoExactLabel}
           </div>
@@ -158,11 +144,12 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           <p className="text-xs text-slate-400 mb-1">Match any part</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
             <b>ServerMate</b>
-            <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
+            <span className="ml-1 text-[11px] text-indigo-400">BOT</span>
             <br />
             {demoAnyLabel}
           </div>
         </div>
+
       </div>
     </div>
   );
