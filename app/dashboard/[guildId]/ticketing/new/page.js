@@ -32,12 +32,12 @@ export default function NewTicketPanelPage({ params }) {
   // =======================================================
   const [panelName, setPanelName] = useState("");
 
-  const [embed, setEmbed] = useState({
-    color: "#5865F2",
-    title: "",
-    description: "Click the button below to open a support ticket.",
-    footerText: "ServerMate Ticket System",
-  });
+const [embed, setEmbed] = useState({
+  color: "#5865F2",
+  title: "",
+  description: "Click the button below to open a support ticket.",
+  footerText: "ServerMate Ticketing System", // LOCKED HERE
+});
 
   const updateEmbed = (field, value) =>
     setEmbed((prev) => ({ ...prev, [field]: value }));
