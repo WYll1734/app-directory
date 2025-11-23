@@ -3,12 +3,15 @@
 import { useState, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 
-export default function RoleMultiSelect({ allRoles = [], selectedRoles, setSelectedRoles }) {
+export default function RoleMultiSelect({
+  allRoles = [],
+  selectedRoles = [],
+  setSelectedRoles,
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Remove selected roles from list
-  const filtered = useMemo(() => {
+  const filteredRoles = useMemo(() => {
     return allRoles
       .filter((r) => !selectedRoles.some((s) => s.id === r.id))
       .filter((r) => r.name.toLowerCase().includes(query.toLowerCase()));
@@ -25,20 +28,20 @@ export default function RoleMultiSelect({ allRoles = [], selectedRoles, setSelec
 
   return (
     <div className="relative w-full">
-      {/* SELECTED ROLES */}
+      {/* Selected roles */}
       <div
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((prev) => !prev)}
         className="w-full bg-slate-800/70 border border-slate-700 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:bg-slate-700/60 transition"
       >
         <div className="flex flex-wrap gap-2">
           {selectedRoles.length === 0 && (
-            <span className="text-slate-400 text-sm">Select roles...</span>
+            <span className="text-slate-400 text-sm">Select roles…</span>
           )}
 
           {selectedRoles.map((role) => (
             <span
               key={role.id}
-              className="bg-indigo-600/30 text-indigo-300 px-2 py-1 rounded-md text-xs flex items-center gap-1"
+              className="bg-indigo-600/30 text-indigo-200 px-2 py-1 rounded-md text-xs flex items-center gap-1"
             >
               @{role.name}
               <button
@@ -57,31 +60,35 @@ export default function RoleMultiSelect({ allRoles = [], selectedRoles, setSelec
         <ChevronDown size={16} className="text-slate-400" />
       </div>
 
-      {/* DROPDOWN */}
+      {/* Dropdown */}
       {open && (
         <div className="absolute z-40 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-
-          {/* SEARCH */}
-          <input
-            className="w-full p-2 bg-slate-800 border-b border-slate-700 text-sm text-slate-200"
-            placeholder="Search roles..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          {/* Search */}
+          <div className="p-2 border-b border-slate-800">
+            <input
+              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
+              placeholder="Search roles..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
 
           <div className="p-1">
-            {filtered.length === 0 && (
-              <p className="text-slate-500 text-sm p-3 text-center">No roles found</p>
+            {filteredRoles.length === 0 && (
+              <p className="text-center text-sm text-slate-500 py-3">
+                No roles found
+              </p>
             )}
 
-            {filtered.map((role) => (
-              <div
+            {filteredRoles.map((role) => (
+              <button
                 key={role.id}
+                type="button"
                 onClick={() => addRole(role)}
-                className="px-3 py-2 hover:bg-slate-800 cursor-pointer text-slate-200 text-sm rounded-md"
+                className="w-full text-left px-3 py-2 rounded-md text-sm text-slate-200 hover:bg-slate-800"
               >
                 @{role.name}
-              </div>
+              </button>
             ))}
           </div>
         </div>
