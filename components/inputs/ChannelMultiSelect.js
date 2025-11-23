@@ -1,209 +1,177 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { ChevronDown, Hash, Mic, Folder } from "lucide-react";
+import { useState, useMemo } from "react";
+import { X, Hash, Volume2, FolderIcon } from "lucide-react";
 
-export default function ChannelMultiSelect({
-  channels = [],
-  values,
-  onChange,
-}) {
+export default function ChannelMultiSelect({ channels = [], values = [], onChange }) {
+  const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
 
-  const ref = useRef(null);
+  // Remove already-selected channels from the dropdown
+  const filtered = useMemo(() => {
+    const selectedIds = new Set(values.map((v) => v.id));
 
-  // ==========================
-  // Format channels into groups
-  // ==========================
-  function groupChannels(chList) {
-    const categories = {};
-    const text = [];
-    const voice = [];
+    const clean = channels.filter((c) => !selectedIds.has(c.id));
 
-    chList.forEach((ch) => {
-      if (values.some((v) => v.id === ch.id)) return; // hide selected
+    const groups = { text: [], voice: [], categories: [], other: [] };
 
-      // CATEGORY
-      if (ch.type === 4) {
-        categories[ch.id] = { ...ch, children: [] };
-      }
-
-      // TEXT
-      else if (ch.type === 0) {
-        text.push(ch);
-      }
-
-      // VOICE
-      else if (ch.type === 2) {
-        voice.push(ch);
-      }
+    clean.forEach((ch) => {
+      if (ch.type === 0) groups.text.push(ch);
+      else if (ch.type === 2) groups.voice.push(ch);
+      else if (ch.type === 4) groups.categories.push(ch);
+      else groups.other.push(ch);
     });
 
-    // Attach children to their category
-    chList.forEach((ch) => {
-      if (ch.parent_id && categories[ch.parent_id] && ch.type !== 4) {
-        categories[ch.parent_id].children.push(ch);
-      }
-    });
+    const applySearch = (list) =>
+      list.filter((c) =>
+        c.name.toLowerCase().includes(query.toLowerCase())
+      );
 
     return {
-      categories: Object.values(categories),
-      text,
-      voice,
+      text: applySearch(groups.text),
+      voice: applySearch(groups.voice),
+      categories: applySearch(groups.categories),
+      other: applySearch(groups.other),
     };
-  }
+  }, [channels, values, query]);
 
-  const grouped = useMemo(() => {
-    const list = channels.filter((c) =>
-      c.name.toLowerCase().includes(search.toLowerCase())
-    );
-    return groupChannels(list);
-  }, [channels, search, values]);
+  const iconFor = (type) => {
+    if (type === 2) return <Volume2 size={14} className="text-blue-300" />;
+    if (type === 4) return <FolderIcon size={14} className="text-yellow-300" />;
+    return <Hash size={14} className="text-slate-300" />;
+  };
 
-  // ==========================
-  // Click outside to close
-  // ==========================
-  useEffect(() => {
-    function handleClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  // ==========================
-  // Add & Remove
-  // ==========================
   const addChannel = (ch) => {
     onChange([...values, ch]);
-    setSearch("");
   };
 
   const removeChannel = (id) => {
-    onChange(values.filter((x) => x.id !== id));
+    onChange(values.filter((c) => c.id !== id));
   };
 
   return (
-    <div className="relative w-full" ref={ref}>
-      {/* SELECT BOX */}
+    <div className="relative w-full">
+      {/* Selected items */}
       <div
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/70 text-sm px-3 py-2 cursor-pointer hover:bg-slate-800 transition"
+        onClick={() => setOpen(true)}
+        className="min-h-[44px] bg-slate-800/70 border border-slate-700 rounded-lg p-2 flex flex-wrap gap-2 cursor-pointer hover:bg-slate-700/60 transition"
       >
-        <span className="text-slate-300">
-          {values.length > 0
-            ? `${values.length} selected`
-            : "Select channels..."}
-        </span>
+        {values.length === 0 && (
+          <span className="text-slate-400 text-sm pl-1">Select channels…</span>
+        )}
 
-        <ChevronDown size={18} className="text-slate-400" />
+        {values.map((ch) => (
+          <div
+            key={ch.id}
+            className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded-lg text-sm text-slate-200"
+          >
+            {iconFor(ch.type)} #{ch.name}
+            <button onClick={() => removeChannel(ch.id)}>
+              <X size={14} className="text-slate-400 hover:text-red-400" />
+            </button>
+          </div>
+        ))}
       </div>
 
-      {/* SELECTED PILLS */}
-      {values.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {values.map((ch) => (
-            <div
-              key={ch.id}
-              className="
-                flex items-center gap-2 text-xs px-2 py-1 
-                bg-indigo-600/30 border border-indigo-500/40 
-                text-indigo-200 rounded-lg
-              "
-            >
-              {ch.name}
-              <button
-                onClick={() => removeChannel(ch.id)}
-                className="text-indigo-300 hover:text-red-300"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* DROPDOWN */}
+      {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 mt-2 z-40 bg-slate-900 border border-slate-800 rounded-xl shadow-xl p-3 max-h-72 overflow-y-auto">
-          {/* Search */}
-          <input
-            placeholder="Search channels..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full mb-3 px-3 py-2 bg-slate-800 border border-slate-700 text-sm rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
+
+          {/* Search box */}
+          <div className="p-2 border-b border-slate-800">
+            <input
+              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
+              placeholder="Search channels..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Section renderer */}
+          <Section
+            title="TEXT CHANNELS"
+            list={filtered.text}
+            iconFor={iconFor}
+            onSelect={addChannel}
+            disabled={false}
           />
 
-          {/* If everything filtered out */}
-          {!grouped.text.length &&
-            !grouped.voice.length &&
-            !grouped.categories.length && (
-              <p className="text-xs text-slate-500 py-2">No channels found</p>
+          <Section
+            title="VOICE CHANNELS"
+            list={filtered.voice}
+            iconFor={iconFor}
+            onSelect={addChannel}
+            disabled={false}
+          />
+
+          <Section
+            title="CATEGORIES"
+            list={filtered.categories}
+            iconFor={iconFor}
+            onSelect={addChannel}
+            disabled={true}
+          />
+
+          <Section
+            title="OTHER"
+            list={filtered.other}
+            iconFor={iconFor}
+            onSelect={addChannel}
+            disabled={false}
+          />
+
+          {/* Empty */}
+          {filtered.text.length === 0 &&
+            filtered.voice.length === 0 &&
+            filtered.categories.length === 0 &&
+            filtered.other.length === 0 && (
+              <p className="text-center text-sm text-slate-500 py-3">
+                No channels found
+              </p>
             )}
-
-          {/* CATEGORY GROUPS */}
-          {grouped.categories.map((cat) => (
-            <div key={cat.id} className="mb-2">
-              <div className="flex items-center gap-2 text-xs text-slate-400 uppercase px-1 mb-1">
-                <Folder size={14} />
-                {cat.name}
-              </div>
-
-              {cat.children.map((ch) => (
-                <button
-                  key={ch.id}
-                  onClick={() => addChannel(ch)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800"
-                >
-                  <Hash size={15} className="text-slate-500" />
-                  {ch.name}
-                </button>
-              ))}
-            </div>
-          ))}
-
-          {/* TEXT CHANNELS */}
-          {grouped.text.length > 0 && (
-            <>
-              <p className="text-xs text-slate-500 uppercase px-1 mb-1">
-                Text Channels
-              </p>
-              {grouped.text.map((ch) => (
-                <button
-                  key={ch.id}
-                  onClick={() => addChannel(ch)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800"
-                >
-                  <Hash size={15} className="text-slate-500" />
-                  {ch.name}
-                </button>
-              ))}
-            </>
-          )}
-
-          {/* VOICE CHANNELS */}
-          {grouped.voice.length > 0 && (
-            <>
-              <p className="text-xs text-slate-500 uppercase px-1 mt-3 mb-1">
-                Voice Channels
-              </p>
-              {grouped.voice.map((ch) => (
-                <button
-                  key={ch.id}
-                  onClick={() => addChannel(ch)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-200 hover:bg-slate-800"
-                >
-                  <Mic size={15} className="text-slate-500" />
-                  {ch.name}
-                </button>
-              ))}
-            </>
-          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function Section({ title, list, iconFor, onSelect, disabled }) {
+  if (!list || list.length === 0) return null;
+
+  return (
+    <div className="p-2">
+      <p className="text-xs text-slate-500 mb-1 px-1">{title}</p>
+
+      {list.map((ch) => {
+        const content = (
+          <>
+            {iconFor(ch.type)}
+            #{ch.name}
+          </>
+        );
+
+        if (disabled) {
+          return (
+            <div
+              key={ch.id}
+              className="px-3 py-2 rounded-md flex items-center gap-2 text-slate-500 text-sm cursor-not-allowed opacity-60"
+            >
+              {content}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            type="button"
+            key={ch.id}
+            onClick={() => onSelect(ch)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-left rounded-md text-sm text-slate-200 hover:bg-slate-800"
+          >
+            {content}
+          </button>
+        );
+      })}
     </div>
   );
 }
