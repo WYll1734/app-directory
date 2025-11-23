@@ -12,10 +12,42 @@ const mockAchievements = [
     description: "Send messages",
     baseAction: "Member sends {count} messages",
     tiers: [
-      { id: "bronze", name: "Bronze", requirement: "Send 20 messages", count: 20 },
-      { id: "silver", name: "Silver", requirement: "Send 100 messages", count: 100 },
-      { id: "gold", name: "Gold", requirement: "Send 500 messages", count: 500 },
-      { id: "diamond", name: "Diamond", requirement: "Send 1000 messages", count: 1000 },
+      {
+        id: "bronze",
+        name: "Bronze",
+        count: 20,
+        giveRole: false,
+        removeRole: false,
+        giveXP: false,
+        giveCoins: false,
+      },
+      {
+        id: "silver",
+        name: "Silver",
+        count: 100,
+        giveRole: false,
+        removeRole: false,
+        giveXP: false,
+        giveCoins: false,
+      },
+      {
+        id: "gold",
+        name: "Gold",
+        count: 500,
+        giveRole: false,
+        removeRole: false,
+        giveXP: false,
+        giveCoins: false,
+      },
+      {
+        id: "diamond",
+        name: "Diamond",
+        count: 1000,
+        giveRole: false,
+        removeRole: false,
+        giveXP: false,
+        giveCoins: false,
+      },
     ],
   },
 ];
@@ -52,6 +84,13 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+const tierIconClasses = {
+  bronze: "from-amber-500 to-orange-400",
+  silver: "from-slate-300 to-slate-500",
+  gold: "from-yellow-400 to-amber-500",
+  diamond: "from-cyan-400 to-blue-500",
+};
+
 export default function AchievementEditorPage({ params }) {
   const { guildId, achievementId } = params;
 
@@ -87,6 +126,15 @@ export default function AchievementEditorPage({ params }) {
       ...prev,
       tiers: prev.tiers.map((t) =>
         t.id === id ? { ...t, count: value } : t
+      ),
+    }));
+  };
+
+  const toggleTierReward = (id, key) => {
+    setAchievement((prev) => ({
+      ...prev,
+      tiers: prev.tiers.map((t) =>
+        t.id === id ? { ...t, [key]: !t[key] } : t
       ),
     }));
   };
@@ -220,6 +268,9 @@ export default function AchievementEditorPage({ params }) {
             <div className="space-y-2">
               {achievement.tiers.map((tier) => {
                 const open = openTierId === tier.id;
+                const gradient =
+                  tierIconClasses[tier.id] || "from-slate-600 to-slate-700";
+
                 return (
                   <div
                     key={tier.id}
@@ -235,13 +286,15 @@ export default function AchievementEditorPage({ params }) {
                       }
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-700" />
+                        <div
+                          className={`w-8 h-8 rounded-lg bg-gradient-to-br ${gradient}`}
+                        />
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-slate-100">
                             {tier.name}
                           </span>
                           <span className="text-xs text-slate-400">
-                            {tier.requirement}
+                            Send {tier.count} messages
                           </span>
                         </div>
                       </div>
@@ -284,29 +337,37 @@ export default function AchievementEditorPage({ params }) {
                             <div className="flex items-center justify-between gap-4">
                               <span>Give a role for achieving</span>
                               <Toggle
-                                checked={false}
-                                onChange={() => {}}
+                                checked={tier.giveRole}
+                                onChange={() =>
+                                  toggleTierReward(tier.id, "giveRole")
+                                }
                               />
                             </div>
                             <div className="flex items-center justify-between gap-4">
                               <span>Remove a role for achieving</span>
                               <Toggle
-                                checked={false}
-                                onChange={() => {}}
+                                checked={tier.removeRole}
+                                onChange={() =>
+                                  toggleTierReward(tier.id, "removeRole")
+                                }
                               />
                             </div>
                             <div className="flex items-center justify-between gap-4">
                               <span>Give XP for achieving</span>
                               <Toggle
-                                checked={false}
-                                onChange={() => {}}
+                                checked={tier.giveXP}
+                                onChange={() =>
+                                  toggleTierReward(tier.id, "giveXP")
+                                }
                               />
                             </div>
                             <div className="flex items-center justify-between gap-4">
                               <span>Give coins for achieving</span>
                               <Toggle
-                                checked={false}
-                                onChange={() => {}}
+                                checked={tier.giveCoins}
+                                onChange={() =>
+                                  toggleTierReward(tier.id, "giveCoins")
+                                }
                               />
                             </div>
                           </div>
@@ -332,7 +393,9 @@ export default function AchievementEditorPage({ params }) {
             <div className="space-y-4 text-xs text-slate-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <div className="font-semibold">Don&apos;t track past progress</div>
+                  <div className="font-semibold">
+                    Don&apos;t track past progress
+                  </div>
                   <div className="text-[11px] text-slate-400">
                     Only track progress from now on, not past activity.
                   </div>
@@ -347,7 +410,8 @@ export default function AchievementEditorPage({ params }) {
                 <div>
                   <div className="font-semibold">Set deadline</div>
                   <div className="text-[11px] text-slate-400">
-                    Great for seasonal events—achievement ends on your chosen date.
+                    Great for seasonal events—achievement ends on your chosen
+                    date.
                   </div>
                 </div>
                 <Toggle
