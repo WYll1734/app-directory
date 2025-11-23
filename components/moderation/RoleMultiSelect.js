@@ -1,96 +1,136 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 
 export default function RoleMultiSelect({
   allRoles = [],
-  selectedRoles = [],
+  selectedRoles,
   setSelectedRoles,
 }) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
 
-  const filteredRoles = useMemo(() => {
+  const containerRef = useRef(null);
+
+  // 🔍 Filter roles + remove already-selected ones
+  const filtered = useMemo(() => {
     return allRoles
       .filter((r) => !selectedRoles.some((s) => s.id === r.id))
-      .filter((r) => r.name.toLowerCase().includes(query.toLowerCase()));
-  }, [allRoles, selectedRoles, query]);
+      .filter((r) =>
+        r.name.toLowerCase().includes(search.toLowerCase())
+      );
+  }, [allRoles, selectedRoles, search]);
 
+  // Click outside = close
+  useEffect(() => {
+    function handleClick(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  // Add selected role
   function addRole(role) {
     setSelectedRoles([...selectedRoles, role]);
-    setQuery("");
+    setSearch("");
   }
 
-  function removeRole(roleId) {
-    setSelectedRoles(selectedRoles.filter((r) => r.id !== roleId));
+  // Remove pill
+  function removeRole(id) {
+    setSelectedRoles(selectedRoles.filter((r) => r.id !== id));
   }
 
   return (
-    <div className="relative w-full">
-      {/* Selected roles */}
+    <div className="relative" ref={containerRef}>
+      {/* SELECTOR BOX */}
       <div
-        onClick={() => setOpen((prev) => !prev)}
-        className="w-full bg-slate-800/70 border border-slate-700 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:bg-slate-700/60 transition"
+        onClick={() => setOpen(!open)}
+        className="
+          flex items-center justify-between 
+          rounded-lg border border-slate-700 bg-slate-800/70 
+          text-sm px-3 py-2 cursor-pointer 
+          hover:bg-slate-800 transition
+        "
       >
-        <div className="flex flex-wrap gap-2">
-          {selectedRoles.length === 0 && (
-            <span className="text-slate-400 text-sm">Select roles…</span>
-          )}
+        <span className="text-slate-300">
+          {selectedRoles.length > 0
+            ? `${selectedRoles.length} selected`
+            : "Select roles..."}
+        </span>
 
-          {selectedRoles.map((role) => (
-            <span
-              key={role.id}
-              className="bg-indigo-600/30 text-indigo-200 px-2 py-1 rounded-md text-xs flex items-center gap-1"
-            >
-              @{role.name}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeRole(role.id);
-                }}
-                className="text-slate-300 hover:text-red-400"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-
-        <ChevronDown size={16} className="text-slate-400" />
+        <ChevronDown size={18} className="text-slate-400" />
       </div>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute z-40 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-64 overflow-y-auto">
-          {/* Search */}
-          <div className="p-2 border-b border-slate-800">
-            <input
-              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
-              placeholder="Search roles..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="p-1">
-            {filteredRoles.length === 0 && (
-              <p className="text-center text-sm text-slate-500 py-3">
-                No roles found
-              </p>
-            )}
-
-            {filteredRoles.map((role) => (
+      {/* SELECTED PILL ROW */}
+      {selectedRoles.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {selectedRoles.map((role) => (
+            <div
+              key={role.id}
+              className="
+                flex items-center gap-2 
+                text-xs px-2 py-1 
+                bg-indigo-600/30 border border-indigo-500/40 
+                text-indigo-200 rounded-lg
+              "
+            >
+              {role.name}
               <button
-                key={role.id}
-                type="button"
-                onClick={() => addRole(role)}
-                className="w-full text-left px-3 py-2 rounded-md text-sm text-slate-200 hover:bg-slate-800"
+                onClick={() => removeRole(role.id)}
+                className="text-indigo-300 hover:text-red-300"
               >
-                @{role.name}
+                ✕
               </button>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* DROPDOWN */}
+      {open && (
+        <div
+          className="
+            absolute left-0 right-0 mt-2 z-30 
+            bg-slate-900 border border-slate-800 
+            rounded-xl shadow-xl p-3
+            max-h-64 overflow-y-auto
+          "
+        >
+          {/* SEARCH BAR */}
+          <input
+            placeholder="Search roles..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="
+              w-full mb-3 px-3 py-2 
+              bg-slate-800 border border-slate-700 
+              text-sm rounded-lg text-slate-200
+              focus:outline-none focus:ring-1 focus:ring-indigo-500
+            "
+          />
+
+          {/* NO ROLES */}
+          {filtered.length === 0 && (
+            <p className="text-xs text-slate-500 py-2">No roles found</p>
+          )}
+
+          {/* ROLE ITEMS */}
+          {filtered.map((role) => (
+            <button
+              key={role.id}
+              onClick={() => addRole(role)}
+              className="
+                w-full text-left px-3 py-2 rounded-lg 
+                text-sm text-slate-200 hover:bg-slate-800
+              "
+            >
+              {role.name}
+            </button>
+          ))}
         </div>
       )}
     </div>
