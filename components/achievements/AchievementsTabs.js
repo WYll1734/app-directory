@@ -1,41 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const tabs = [
-  { id: "achievements", label: "Achievements" },
-  { id: "configuration", label: "Configuration" },
-  { id: "commands", label: "Commands" },
+  { id: "overview", label: "Overview" },
+  { id: "levels", label: "Levels" },
+  { id: "badges", label: "Badges" },
+  { id: "leaderboard", label: "Leaderboard" },
 ];
 
-export default function AchievementsTabs({ guildId, activeTab }) {
+export default function AchievementsTabs({ guildId }) {
+  const pathname = usePathname();
+
   return (
-    <div className="mb-6 border-b border-slate-800/70">
-      <nav className="flex gap-1 overflow-x-auto pb-1">
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeTab;
+    <div className="flex gap-3 border-b border-slate-800 mb-6">
+      {tabs.map((tab) => {
+        const active = pathname.includes(`/achievements/${tab.id}`);
 
-          const href =
-            tab.id === "achievements"
-              ? `/dashboard/${guildId}/achievements`
-              : `/dashboard/${guildId}/achievements/${tab.id}`;
-
-          return (
-            <Link
-              key={tab.id}
-              href={href}
-              className={`flex items-center gap-2 px-4 py-2 text-sm rounded-t-lg border-b-2 -mb-px transition-all
-                ${
-                  isActive
-                    ? "border-indigo-500 text-indigo-400 bg-slate-900"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
-                }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+        return (
+          <Link
+            key={tab.id}
+            href={`/dashboard/${guildId}/achievements/${tab.id}`}
+            className={`px-4 py-2 rounded-t-md font-medium transition
+              ${
+                active
+                  ? "bg-slate-800 text-white border-b-2 border-emerald-500"
+                  : "text-slate-400 hover:text-white"
+              }`}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }
