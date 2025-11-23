@@ -94,9 +94,14 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             ← Back to AutoMod
           </Link>
 
-          <h1 className="mt-2 text-xl font-semibold text-slate-100">{title}</h1>
+          <h1 className="mt-2 text-xl font-semibold text-slate-100">
+            {title}
+          </h1>
+
           {description && (
-            <p className="text-xs text-slate-400 max-w-2xl">{description}</p>
+            <p className="text-xs text-slate-400 max-w-2xl mt-1">
+              {description}
+            </p>
           )}
         </div>
 
@@ -112,7 +117,14 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
       {/* PERMISSIONS CARD */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-8">
-        <h2 className="font-semibold text-slate-200">Permissions</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-slate-200">Permissions</h2>
+          <p className="text-[11px] text-slate-500">
+            {selectedRoles.length} role{selectedRoles.length !== 1 && "s"} ·{" "}
+            {selectedChannels.length} channel
+            {selectedChannels.length !== 1 && "s"} selected
+          </p>
+        </div>
 
         {/* ROLE PERMISSIONS */}
         <div className="space-y-4">
@@ -148,7 +160,6 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all channels except
           </label>
 
-          {/* MULTI-SELECT CHANNELS FOR AUTOMOD */}
           <ChannelMultiSelect
             channels={channels}
             values={selectedChannels}
