@@ -1,12 +1,17 @@
 "use client";
 
+import ModerationTabs from "@/components/moderation/ModerationTabs";
 import AuditLoggingTab from "@/components/moderation/AuditLoggingTab";
 
 export default function AuditLoggingPage({ params }) {
-  const guildId = params.guildId; // ✔ FIXED (case-sensitive)
+  const { guildId } = params;
 
   return (
-    <div className="p-6">
+    <div className="flex flex-col gap-6 p-6">
+      {/* MODERATION TOP TABS */}
+      <ModerationTabs guildId={guildId} activeTab="audit-logging" />
+
+      {/* THE MAIN AUDIT LOGGING UI */}
       <AuditLoggingTab guildId={guildId} />
     </div>
   );
