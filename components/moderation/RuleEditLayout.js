@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// Selectors
 import RoleMultiSelect from "@/components/moderation/RoleMultiSelect";
 import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
@@ -18,73 +17,63 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // ================================
+  // ===========================
   // STATE
-  // ================================
+  // ===========================
   const [roles, setRoles] = useState([]);
   const [channels, setChannels] = useState([]);
 
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
 
-  // REAL FIX: track loading state
-  const [loadingRoles, setLoadingRoles] = useState(true);
-  const [loadingChannels, setLoadingChannels] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // ================================
-  // FETCH ROLES + CHANNELS
-  // ================================
+  // ===========================
+  // FETCH PERMISSIONS DATA
+  // ===========================
   useEffect(() => {
-    async function loadRoles() {
+    async function loadData() {
       try {
-        const res = await fetch(`/api/discord/guild/${guildId}/roles`);
-        const json = await res.json();
+        const [roleRes, chRes] = await Promise.all([
+          fetch(`/api/discord/guild/${guildId}/roles`),
+          fetch(`/api/discord/guild/${guildId}/channels`),
+        ]);
 
-        if (json.roles) {
-          const sorted = json.roles.sort((a, b) => b.position - a.position);
-          setRoles(sorted);
+        const roleJson = await roleRes.json();
+        const chJson = await chRes.json();
+
+        if (roleJson.roles) {
+          setRoles(
+            roleJson.roles.sort((a, b) => b.position - a.position)
+          );
         }
-      } catch (e) {
-        console.error("Failed loading roles:", e);
-      }
 
-      setLoadingRoles(false);
+        if (chJson.channels) {
+          setChannels(chJson.channels);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Failed loading permissions:", err);
+      }
     }
 
-    async function loadChannels() {
-      try {
-        const res = await fetch(`/api/discord/guild/${guildId}/channels`);
-        const json = await res.json();
-
-        if (json.channels) setChannels(json.channels);
-      } catch (e) {
-        console.error("Failed loading channels:", e);
-      }
-
-      setLoadingChannels(false);
-    }
-
-    loadRoles();
-    loadChannels();
+    loadData();
   }, [guildId]);
 
-  // ================================
-  // FIXED LOADING SCREEN
-  // ================================
-  if (loadingRoles || loadingChannels)
+  if (loading)
     return (
-      <p className="text-slate-300 text-sm animate-pulse">
+      <p className="text-slate-300 animate-pulse">
         Loading permissions…
       </p>
     );
 
-  // ================================
-  // UI
-  // ================================
   return (
-    <div className="flex flex-col gap-8 pb-20">
+    <div className="flex flex-col gap-10 pb-20">
 
+      {/* ====================== */}
       {/* HEADER */}
+      {/* ====================== */}
       <div className="flex items-start justify-between">
         <div>
           <Link
@@ -97,7 +86,12 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           <h1 className="mt-2 text-xl font-semibold text-slate-100">
             {title}
           </h1>
-          <p className="text-xs text-slate-400">{description}</p>
+
+          {description && (
+            <p className="text-xs text-slate-400 mt-1">
+              {description}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -110,13 +104,20 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* PERMISSIONS CARD */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-8">
-        <h2 className="font-semibold text-slate-200">Permissions</h2>
+      {/* ====================== */}
+      {/* PERMISSIONS PANEL */}
+      {/* ====================== */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-10">
+
+        <h2 className="text-lg font-semibold text-slate-200">
+          Permissions
+        </h2>
 
         {/* ROLE PERMISSIONS */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
+          <h3 className="text-sm font-medium text-slate-300">
+            Role permissions
+          </h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" defaultChecked />
@@ -137,7 +138,9 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
         {/* CHANNEL PERMISSIONS */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-slate-300">Channel permissions</h3>
+          <h3 className="text-sm font-medium text-slate-300">
+            Channel permissions
+          </h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="channelPerms" defaultChecked />
@@ -157,33 +160,44 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </section>
 
-      {/* EXTRA SETTINGS */}
+      {/* ====================== */}
+      {/* EXTRA RULE OPTIONS */}
+      {/* ====================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
-        <h2 className="font-semibold text-slate-200">Additional settings</h2>
+        <h2 className="text-lg font-semibold text-slate-200">
+          Additional settings
+        </h2>
+
         {extraFields}
       </section>
 
-      {/* DEMO */}
+      {/* ====================== */}
+      {/* DEMO PREVIEW */}
+      {/* ====================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
-        <h2 className="font-semibold text-slate-200">How does it work?</h2>
+        <h2 className="text-lg font-semibold text-slate-200">
+          How does it work?
+        </h2>
 
         <p className="text-sm text-slate-400">{demoTitle}</p>
 
+        {/* Exact */}
         <div>
           <p className="text-xs text-slate-400 mb-1">Exact match</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
             <b>ServerMate</b>{" "}
-            <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
+            <span className="text-indigo-400 text-[11px] ml-1">BOT</span>
             <br />
             {demoExactLabel}
           </div>
         </div>
 
+        {/* Any */}
         <div>
           <p className="text-xs text-slate-400 mb-1">Match any part</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
             <b>ServerMate</b>{" "}
-            <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
+            <span className="text-indigo-400 text-[11px] ml-1">BOT</span>
             <br />
             {demoAnyLabel}
           </div>
