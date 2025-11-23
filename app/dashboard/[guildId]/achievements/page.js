@@ -39,11 +39,25 @@ const mockAchievements = [
 function ProgressBar({ value = 0 }) {
   return (
     <div className="mt-2 h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
-      <div
-        className="h-full bg-blue-500"
-        style={{ width: `${value}%` }}
-      />
+      <div className="h-full bg-blue-500" style={{ width: `${value}%` }} />
     </div>
+  );
+}
+
+function SaveButton({ onClick, saving, saved, label = "Save" }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={saving}
+      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-2
+        ${
+          saved
+            ? "bg-emerald-600 hover:bg-emerald-600 text-white"
+            : "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+        }`}
+    >
+      {saving ? "Saving..." : saved ? "Saved ✓" : label}
+    </button>
   );
 }
 
@@ -51,6 +65,9 @@ export default function AchievementsOverviewPage({ params }) {
   const { guildId } = params;
   const [achievements, setAchievements] = useState(mockAchievements);
   const [search, setSearch] = useState("");
+
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [savedConfig, setSavedConfig] = useState(false);
 
   const toggleAchievement = (id) => {
     setAchievements((prev) =>
@@ -63,6 +80,16 @@ export default function AchievementsOverviewPage({ params }) {
   const filtered = achievements.filter((a) =>
     a.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const fakeSave = () => {
+    setSavingConfig(true);
+    setSavedConfig(false);
+    setTimeout(() => {
+      setSavingConfig(false);
+      setSavedConfig(true);
+      setTimeout(() => setSavedConfig(false), 1500);
+    }, 800);
+  };
 
   return (
     <div className="p-6 space-y-8">
@@ -80,16 +107,26 @@ export default function AchievementsOverviewPage({ params }) {
           </p>
         </div>
 
-        {/* Active toggle like top-right “Active ON” */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs uppercase tracking-wide text-slate-400">
-            Active
-          </span>
-          <label className="relative inline-flex cursor-pointer items-center shrink-0">
-            <input type="checkbox" className="peer sr-only" defaultChecked />
-            <div className="peer h-6 w-11 rounded-full bg-slate-600 peer-checked:bg-blue-500 transition-all"></div>
-            <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white peer-checked:translate-x-5 transition-all shadow"></div>
-          </label>
+        <div className="flex items-center gap-4">
+          {/* Active toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-slate-400">
+              Active
+            </span>
+            <label className="relative inline-flex cursor-pointer items-center shrink-0">
+              <input type="checkbox" className="peer sr-only" defaultChecked />
+              <div className="peer h-6 w-11 rounded-full bg-slate-600 peer-checked:bg-blue-500 transition-all"></div>
+              <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white peer-checked:translate-x-5 transition-all shadow"></div>
+            </label>
+          </div>
+
+          {/* Save config */}
+          <SaveButton
+            label="Save Settings"
+            onClick={fakeSave}
+            saving={savingConfig}
+            saved={savedConfig}
+          />
         </div>
       </div>
 
@@ -187,19 +224,19 @@ export default function AchievementsOverviewPage({ params }) {
                 {/* Tiers */}
                 <div className="mt-2 text-[11px] text-slate-400 space-y-1">
                   <div>
-                    <span className="text-slate-300">Bronze</span>{" "}
+                    <span className="text-slate-300">Bronze</span>
                     <span className="ml-2">{ach.tiers.bronze}</span>
                   </div>
                   <div>
-                    <span className="text-slate-300">Silver</span>{" "}
+                    <span className="text-slate-300">Silver</span>
                     <span className="ml-2">{ach.tiers.silver}</span>
                   </div>
                   <div>
-                    <span className="text-slate-300">Gold</span>{" "}
+                    <span className="text-slate-300">Gold</span>
                     <span className="ml-2">{ach.tiers.gold}</span>
                   </div>
                   <div>
-                    <span className="text-slate-300">Diamond</span>{" "}
+                    <span className="text-slate-300">Diamond</span>
                     <span className="ml-2">{ach.tiers.diamond}</span>
                   </div>
                 </div>
