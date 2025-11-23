@@ -1,10 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useState } from "react";
-import useSWR from "swr";
 
-import RoleMultiSelect from "@/components/inputs/RoleMultiSelect";
+// NEW inputs
+import RoleMultiSelect from "@/components/moderation/RoleMultiSelect";
 import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
 export default function RuleEditLayout({ guildId, ruleConfig }) {
@@ -18,53 +18,71 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  const fetcher = (url) => fetch(url).then((r) => r.json());
-
-  const { data: rolesData, isLoading: rolesLoading, error: rolesError } = useSWR(
-    `/api/discord/guilds/${guildId}/roles`,
-    fetcher
-  );
-  const { data: channelsData, isLoading: chansLoading, error: chansError } =
-    useSWR(`/api/discord/guilds/${guildId}/channels`, fetcher);
-
-  const roles = rolesData?.roles || [];
-  const channels = channelsData?.channels || [];
+  // ================================
+  // STATE
+  // ================================
+  const [roles, setRoles] = useState([]);
+  const [channels, setChannels] = useState([]);
 
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
 
-  const loading = rolesLoading || chansLoading;
-  const error = rolesError || chansError || (!rolesData?.ok && rolesData?.error) || (!channelsData?.ok && channelsData?.error);
+  // ================================
+  // FETCH ROLES + CHANNELS
+  // ================================
+  useEffect(() => {
+    async function loadRoles() {
+      try {
+        const res = await fetch(`/api/discord/guild/${guildId}/roles`);
+        const json = await res.json();
+        if (json.roles) {
+          const sorted = json.roles.sort((a, b) => b.position - a.position);
+          setRoles(sorted);
+        }
+      } catch (e) {
+        console.error("Failed loading roles:", e);
+      }
+    }
 
-  if (loading) {
-    return <p className="text-sm text-slate-400">Loading permissions…</p>;
-  }
+    async function loadChannels() {
+      try {
+        const res = await fetch(`/api/discord/guild/${guildId}/channels`);
+        const json = await res.json();
+        if (json.channels) setChannels(json.channels);
+      } catch (e) {
+        console.error("Failed loading channels:", e);
+      }
+    }
 
-  if (error) {
+    loadRoles();
+    loadChannels();
+  }, [guildId]);
+
+  // Loading state
+  if (!roles.length || !channels.length)
     return (
-      <p className="text-sm text-red-400">
-        Failed to load Discord data: {String(error)}
+      <p className="text-slate-300 text-sm animate-pulse">
+        Loading permissions…
       </p>
     );
-  }
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-8 pb-20">
+
+      {/* ============================== */}
+      {/* HEADER */}
+      {/* ============================== */}
+      <div className="flex items-start justify-between">
+        <div>
           <Link
             href={`/dashboard/${guildId}/moderation`}
             className="text-sm text-slate-400 hover:text-slate-200"
           >
             ← Back to AutoMod
           </Link>
-          <div>
-            <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
-            {description && (
-              <p className="text-xs text-slate-400">{description}</p>
-            )}
-          </div>
+
+          <h1 className="mt-2 text-xl font-semibold text-slate-100">{title}</h1>
+          <p className="text-xs text-slate-400">{description}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -77,89 +95,93 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* Permissions card */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
+      {/* ============================== */}
+      {/* PERMISSIONS CARD */}
+      {/* ============================== */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-8">
         <h2 className="font-semibold text-slate-200">Permissions</h2>
 
-        {/* Role permissions */}
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-slate-300">
-            Role permissions
-          </h3>
+        {/* ROLE PERMISSIONS */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" defaultChecked />
-            Deny for all roles except:
+            Deny for all roles except
           </label>
 
           <RoleMultiSelect
-            roles={roles}
-            value={selectedRoles}
-            onChange={setSelectedRoles}
+            allRoles={roles}
+            selectedRoles={selectedRoles}
+            setSelectedRoles={setSelectedRoles}
           />
 
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-slate-300 mt-2">
             <input type="radio" name="rolePerms" />
-            Allow for all roles except:
+            Allow for all roles except
           </label>
         </div>
 
-        {/* Channel permissions */}
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-slate-300">
-            Channel permissions
-          </h3>
+        {/* CHANNEL PERMISSIONS */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-slate-300">Channel permissions</h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="channelPerms" defaultChecked />
-            Deny for all channels except:
+            Deny for all channels except
           </label>
 
           <ChannelMultiSelect
             channels={channels}
-            value={selectedChannels}
+            values={selectedChannels}
             onChange={setSelectedChannels}
           />
 
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-slate-300 mt-2">
             <input type="radio" name="channelPerms" />
-            Allow for all channels except:
+            Allow for all channels except
           </label>
         </div>
-      </div>
+      </section>
 
-      {/* Additional settings */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
+      {/* ============================== */}
+      {/* EXTRA SETTINGS */}
+      {/* ============================== */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
         {extraFields}
-      </div>
+      </section>
 
-      {/* Demo */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-4">
+      {/* ============================== */}
+      {/* DEMO */}
+      {/* ============================== */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
         <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
         <p className="text-sm text-slate-400">{demoTitle}</p>
 
+        {/* EXACT MATCH */}
         <div>
           <p className="text-xs text-slate-400 mb-1">Exact match</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
-            <b>ServerMate</b>
+            <b>ServerMate</b>{" "}
             <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
             <br />
             {demoExactLabel}
           </div>
         </div>
 
+        {/* MATCH ANY */}
         <div>
           <p className="text-xs text-slate-400 mb-1">Match any part</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
-            <b>ServerMate</b>
+            <b>ServerMate</b>{" "}
             <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
             <br />
             {demoAnyLabel}
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
