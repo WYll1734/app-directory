@@ -6,7 +6,8 @@ export default function OverviewPage({ params }) {
   const essentials = [
     {
       label: "Welcome & Goodbye",
-      description: "Automatically send messages and give roles when members join or leave.",
+      description:
+        "Automatically send messages and give roles when members join or leave.",
       icon: "🖐️",
       href: `/dashboard/${guildId}/welcome-messages`,
     },
@@ -30,13 +31,15 @@ export default function OverviewPage({ params }) {
     },
     {
       label: "Levels",
-      description: "Give members XP & levels when they send messages.",
+      description:
+        "Give members XP & levels when they send messages.",
       icon: "🎮",
       href: `/dashboard/${guildId}/levels`,
     },
     {
       label: "Achievements",
-      description: "Let your members unlock achievements for rewards.",
+      description:
+        "Let your members unlock achievements for rewards.",
       icon: "🏆",
       href: `/dashboard/${guildId}/achievements`,
     },
@@ -51,7 +54,8 @@ export default function OverviewPage({ params }) {
     },
     {
       label: "Temp Channels",
-      description: "Automatic temporary voice channels for members.",
+      description:
+        "Automatic temporary voice channels for members.",
       icon: "📢",
       href: `/dashboard/${guildId}/temp-channels`,
     },
@@ -63,7 +67,8 @@ export default function OverviewPage({ params }) {
     },
     {
       label: "Polls",
-      description: "Create reaction-based polls for members.",
+      description:
+        "Create reaction-based polls for members.",
       icon: "📊",
       href: `/dashboard/${guildId}/polls`,
     },
@@ -75,7 +80,8 @@ export default function OverviewPage({ params }) {
     },
     {
       label: "Statistics Channels",
-      description: "Create channels that track server statistics.",
+      description:
+        "Create channels that track server statistics.",
       icon: "📈",
       href: `/dashboard/${guildId}/statistics`,
     },
@@ -90,7 +96,8 @@ export default function OverviewPage({ params }) {
   const management = [
     {
       label: "Auto Roles",
-      description: "Automatically assign roles to new members.",
+      description:
+        "Automatically assign roles to new members.",
       icon: "🎯",
       href: `/dashboard/${guildId}/auto-roles`,
     },
@@ -102,19 +109,22 @@ export default function OverviewPage({ params }) {
     },
     {
       label: "Custom Commands",
-      description: "Create interactive custom bot commands.",
+      description:
+        "Create interactive custom bot commands.",
       icon: "💬",
       href: `/dashboard/${guildId}/custom-commands`,
     },
     {
       label: "Logging",
-      description: "Track server events such as edits, bans, joins, etc.",
+      description:
+        "Track server events such as edits, bans, joins, etc.",
       icon: "📜",
       href: `/dashboard/${guildId}/logging`,
     },
     {
       label: "Bot Settings",
-      description: "Edit bot configuration, permissions, and behavior.",
+      description:
+        "Edit bot configuration, permissions, and behavior.",
       icon: "⚡",
       href: `/dashboard/${guildId}/bot-settings`,
     },
@@ -124,7 +134,7 @@ export default function OverviewPage({ params }) {
     <a
       key={item.label}
       href={item.href}
-      className="group block rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-[0_0_0_rgba(0,0,0,0)] outline-none transition duration-200 hover:-translate-y-0.5 hover:border-indigo-500/70 hover:shadow-[0_0_30px_rgba(79,70,229,0.45)] focus-visible:ring-2 focus-visible:ring-indigo-500/70"
+      className="group block rounded-2xl border border-slate-800 bg-slate-900/80 p-5 overflow-hidden shadow-[0_0_0_rgba(0,0,0,0)] outline-none transition duration-200 hover:-translate-y-0.5 hover:border-indigo-500/70 hover:shadow-[0_0_30px_rgba(79,70,229,0.45)] focus-visible:ring-2 focus-visible:ring-indigo-500/70"
       style={{ animationDelay: `${index * 30}ms` }}
     >
       <div className="mb-3 flex items-center gap-3">
@@ -132,9 +142,11 @@ export default function OverviewPage({ params }) {
           {item.icon}
         </div>
       </div>
+
       <h3 className="mb-1 text-lg font-semibold text-slate-100 group-hover:text-white">
         {item.label}
       </h3>
+
       <p className="mb-4 text-sm text-slate-400">{item.description}</p>
 
       <button className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 group-hover:bg-indigo-600 group-hover:text-white">
@@ -151,10 +163,16 @@ export default function OverviewPage({ params }) {
         description="All modules available for this Discord server"
       />
 
-      {/* Simple metrics row (static for now, can wire later) */}
+      {/* METRICS */}
       <section className="grid gap-4 md:grid-cols-4">
         {[
-          { label: "Modules Available", value: essentials.length + utilities.length + management.length },
+          {
+            label: "Modules Available",
+            value:
+              essentials.length +
+              utilities.length +
+              management.length,
+          },
           { label: "Essentials", value: essentials.length },
           { label: "Utilities", value: utilities.length },
           { label: "Server Management", value: management.length },
@@ -175,7 +193,9 @@ export default function OverviewPage({ params }) {
 
       {/* ESSENTIALS */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Essentials</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">
+          Essentials
+        </h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {essentials.map((item, i) => renderCard(item, i))}
         </div>
@@ -183,7 +203,9 @@ export default function OverviewPage({ params }) {
 
       {/* UTILITIES */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Utilities</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">
+          Utilities
+        </h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {utilities.map((item, i) => renderCard(item, i))}
         </div>
@@ -191,11 +213,13 @@ export default function OverviewPage({ params }) {
 
       {/* SERVER MANAGEMENT */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">Server Management</h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">
+          Server Management
+        </h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {management.map((item, i) => renderCard(item, i))}
         </div>
       </section>
-    </div>
+      </div>
   );
 }
