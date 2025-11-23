@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import useSWR from "swr";
 
 import RoleMultiSelect from "@/components/inputs/RoleMultiSelect";
 import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
@@ -17,61 +18,39 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // === STATE ===
-  const [roles, setRoles] = useState([]);
-  const [channels, setChannels] = useState([]);
+  const fetcher = (url) => fetch(url).then((r) => r.json());
 
-  const [selectedRoles, setSelectedRoles] = useState([]);     // MULTI
-  const [selectedChannels, setSelectedChannels] = useState([]); // MULTI
+  const { data: rolesData, isLoading: rolesLoading, error: rolesError } = useSWR(
+    `/api/discord/guilds/${guildId}/roles`,
+    fetcher
+  );
+  const { data: channelsData, isLoading: chansLoading, error: chansError } =
+    useSWR(`/api/discord/guilds/${guildId}/channels`, fetcher);
 
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState("");
+  const roles = rolesData?.roles || [];
+  const channels = channelsData?.channels || [];
 
-  // === FETCH ROLES + CHANNELS ===
-  useEffect(() => {
-    async function load() {
-      try {
-        const [r, c] = await Promise.all([
-          fetch(`/api/discord/guild/${guildId}/roles`).then((res) => res.json()),
-          fetch(`/api/discord/guild/${guildId}/channels`).then((res) =>
-            res.json()
-          ),
-        ]);
+  const [selectedRoles, setSelectedRoles] = useState([]);
+  const [selectedChannels, setSelectedChannels] = useState([]);
 
-        if (!r.ok) throw new Error("Failed to load roles");
-        if (!c.ok) throw new Error("Failed to load channels");
-
-        setRoles(r.roles || []);
-        setChannels(c.channels || []);
-      } catch (err) {
-        setFetchError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-  }, [guildId]);
+  const loading = rolesLoading || chansLoading;
+  const error = rolesError || chansError || (!rolesData?.ok && rolesData?.error) || (!channelsData?.ok && channelsData?.error);
 
   if (loading) {
-    return (
-      <div className="text-slate-300 text-sm">
-        Loading rule editor…
-      </div>
-    );
+    return <p className="text-sm text-slate-400">Loading permissions…</p>;
   }
 
-  if (fetchError) {
+  if (error) {
     return (
-      <div className="text-red-400 text-sm">
-        Error: {fetchError}
-      </div>
+      <p className="text-sm text-red-400">
+        Failed to load Discord data: {String(error)}
+      </p>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
-      {/* TOP BAR */}
+      {/* Header bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -80,10 +59,11 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           >
             ← Back to AutoMod
           </Link>
-
           <div>
             <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
-            <p className="text-xs text-slate-400">{description}</p>
+            {description && (
+              <p className="text-xs text-slate-400">{description}</p>
+            )}
           </div>
         </div>
 
@@ -97,13 +77,15 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* PERMISSIONS */}
+      {/* Permissions card */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-slate-200">Permissions</h2>
 
-        {/* ROLE PERMISSIONS */}
+        {/* Role permissions */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
+          <h3 className="text-sm font-medium text-slate-300">
+            Role permissions
+          </h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" defaultChecked />
@@ -122,7 +104,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           </label>
         </div>
 
-        {/* CHANNEL PERMISSIONS */}
+        {/* Channel permissions */}
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-medium text-slate-300">
             Channel permissions
@@ -146,14 +128,13 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* EXTRA RULE SETTINGS */}
+      {/* Additional settings */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
-
         {extraFields}
       </div>
 
-      {/* DEMO SECTION */}
+      {/* Demo */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-4">
         <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
@@ -162,7 +143,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         <div>
           <p className="text-xs text-slate-400 mb-1">Exact match</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
-            <b>ServerMate</b>{" "}
+            <b>ServerMate</b>
             <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
             <br />
             {demoExactLabel}
@@ -172,7 +153,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         <div>
           <p className="text-xs text-slate-400 mb-1">Match any part</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
-            <b>ServerMate</b>{" "}
+            <b>ServerMate</b>
             <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
             <br />
             {demoAnyLabel}
