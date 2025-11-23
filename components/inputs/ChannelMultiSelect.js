@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from "react";
 
 const icons = {
   0: "💬",  // Text
-  5: "📢",  // Announcement
-  15: "🧵", // Forum
   2: "🔊",  // Voice
   4: "📁",  // Category
 };
@@ -18,7 +16,7 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
   const containerRef = useRef(null);
   const listRef = useRef(null);
 
-  // close dropdown when clicking outside
+  // close on outside click
   useEffect(() => {
     function click(e) {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -29,22 +27,28 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
     return () => document.removeEventListener("mousedown", click);
   }, []);
 
-  // Only allow text / announcement / forum / voice (if you want)
+  // Only selectable: text + voice
   const selectable = channels.filter(
-    (c) => c.type === 0 || c.type === 5 || c.type === 15 || c.type === 2
+    (c) => c.type === 0 || c.type === 2
   );
 
   const filtered = selectable.filter((c) =>
     c.name.toLowerCase().includes(query.toLowerCase())
   );
 
-  // group by category
+  // group by category (type 4)
   const categories = {};
-  for (const c of filtered) {
-    const parent = c.parent_id || "uncategorized";
+  for (const ch of filtered) {
+    const parent = ch.parent_id || "uncategorized";
     if (!categories[parent]) categories[parent] = [];
-    categories[parent].push(c);
+    categories[parent].push(ch);
   }
+
+  useEffect(() => {
+    if (highlightedIndex >= filtered.length) {
+      setHighlightedIndex(filtered.length > 0 ? filtered.length - 1 : 0);
+    }
+  }, [filtered.length, highlightedIndex]);
 
   const toggle = (id) => {
     if (value.includes(id)) {
@@ -59,6 +63,12 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
     onChange([]);
   };
 
+  const scrollTo = (index) => {
+    if (!listRef.current) return;
+    const item = listRef.current.querySelector(`[data-index="${index}"]`);
+    if (item) item.scrollIntoView({ block: "nearest" });
+  };
+
   const handleKeyDown = (e) => {
     if (!open && (e.key === "ArrowDown" || e.key === "Enter")) {
       setOpen(true);
@@ -69,16 +79,20 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((prev) =>
-        prev + 1 >= filtered.length ? filtered.length - 1 : prev + 1
-      );
-      scrollTo(highlightedIndex + 1);
+      setHighlightedIndex((prev) => {
+        const next = Math.min(prev + 1, filtered.length - 1);
+        scrollTo(next);
+        return next;
+      });
     }
 
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightedIndex((prev) => (prev - 1 < 0 ? 0 : prev - 1));
-      scrollTo(highlightedIndex - 1);
+      setHighlightedIndex((prev) => {
+        const next = Math.max(prev - 1, 0);
+        scrollTo(next);
+        return next;
+      });
     }
 
     if (e.key === "Enter") {
@@ -88,18 +102,14 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
     }
 
     if (e.key === "Escape") {
+      e.preventDefault();
       setOpen(false);
     }
 
     if (e.key === "Backspace" && query === "" && value.length > 0) {
+      e.preventDefault();
       onChange(value.slice(0, -1));
     }
-  };
-
-  const scrollTo = (index) => {
-    if (!listRef.current) return;
-    const item = listRef.current.querySelector(`[data-index="${index}"]`);
-    if (item) item.scrollIntoView({ block: "nearest" });
   };
 
   return (
@@ -119,16 +129,16 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
         )}
 
         {value.map((id) => {
-          const c = channels.find((ch) => ch.id === id);
-          if (!c) return null;
+          const ch = channels.find((c) => c.id === id);
+          if (!ch) return null;
 
           return (
             <span
               key={id}
               className="flex items-center gap-1 rounded-full bg-slate-800/90 px-2 py-1 text-xs text-slate-100 shadow-sm shadow-black/40"
             >
-              {icons[c.type] || "📄"}
-              <span>#{c.name}</span>
+              {icons[ch.type] || "📄"}
+              <span>#{ch.name}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -155,7 +165,6 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
       {/* Dropdown */}
       {open && (
         <div className="absolute left-0 right-0 mt-2 rounded-xl bg-slate-950 border border-slate-800 shadow-2xl shadow-black/40 z-50 animate-fadeIn">
-
           {/* Search */}
           <div className="border-b border-slate-800 px-2 py-2">
             <input
@@ -189,7 +198,8 @@ export default function ChannelMultiSelect({ channels = [], value = [], onChange
                   <div key={catId}>
                     {category && (
                       <div className="flex items-center gap-1 text-[11px] uppercase tracking-[0.16em] text-slate-500 px-1 mb-1">
-                        📁 {category.name}
+                        <span>{icons[4]}</span>
+                        <span className="truncate">{category.name}</span>
                       </div>
                     )}
 
