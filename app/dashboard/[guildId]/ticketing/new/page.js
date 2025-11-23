@@ -89,7 +89,7 @@ function EmojiPicker({ value, onChange }) {
 }
 
 // ---------------------------------------------------------
-// Reusable ChannelSelect (matches your channel UI)
+// ChannelSelect – minimal floating dropdown (option C)
 // ---------------------------------------------------------
 function ChannelSelect({
   channels,
@@ -101,25 +101,16 @@ function ChannelSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const containerRef = useRef(null);
+  const [menuRect, setMenuRect] = useState(null);
 
-  // Close on outside click
-  useEffect(() => {
-    function handle(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
+  const containerRef = useRef(null);
+  const menuRef = useRef(null);
 
   const selectedChannel = channels.find((c) => c.id === value) || null;
 
   const textChannels = channels.filter(
     (c) =>
-      (c.type === 0 || c.type === 5 || c.type === 15) && // text/news/forum etc
-      c.name
+      (c.type === 0 || c.type === 5 || c.type === 15) && c.name
   );
 
   const filtered = textChannels.filter((c) =>
@@ -127,6 +118,45 @@ function ChannelSelect({
   );
 
   const disabled = loading || !!error;
+
+  // Close on outside click
+  useEffect(() => {
+    function handle(e) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target) &&
+        (!menuRef.current || !menuRef.current.contains(e.target))
+      ) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  // Compute fixed menu position so it floats above all cards
+  const updateMenuRect = () => {
+    if (!containerRef.current) return;
+    const r = containerRef.current.getBoundingClientRect();
+    setMenuRect({
+      top: r.bottom + window.scrollY + 4,
+      left: r.left + window.scrollX,
+      width: r.width,
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updateMenuRect();
+
+    const handler = () => updateMenuRect();
+    window.addEventListener("resize", handler);
+    window.addEventListener("scroll", handler, true);
+    return () => {
+      window.removeEventListener("resize", handler);
+      window.removeEventListener("scroll", handler, true);
+    };
+  }, [open]);
 
   return (
     <div className="relative w-full" ref={containerRef}>
@@ -155,8 +185,16 @@ function ChannelSelect({
         <ChevronDown className="h-4 w-4 text-slate-400" />
       </button>
 
-      {open && !disabled && (
-        <div className="absolute left-0 right-0 mt-1 rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-50 overflow-hidden">
+      {open && !disabled && menuRect && (
+        <div
+          ref={menuRef}
+          className="fixed rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-[9999] overflow-hidden"
+          style={{
+            top: menuRect.top,
+            left: menuRect.left,
+            width: menuRect.width,
+          }}
+        >
           {/* Search */}
           <div className="border-b border-slate-800 p-2">
             <input
@@ -169,10 +207,6 @@ function ChannelSelect({
 
           {/* List */}
           <div className="max-h-64 overflow-y-auto text-sm">
-            <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Text Channels
-            </div>
-
             {filtered.length === 0 && (
               <div className="px-3 py-2 text-slate-500 text-sm">
                 No channels found.
@@ -242,9 +276,7 @@ export default function NewTicketPanelPage({ params }) {
       try {
         setChannelsLoading(true);
         setChannelsError("");
-        const res = await fetch(
-          `/api/discord/guilds/${guildId}/channels`
-        );
+        const res = await fetch(`/api/discord/guilds/${guildId}/channels`);
         let json;
         try {
           json = await res.json();
@@ -270,9 +302,7 @@ export default function NewTicketPanelPage({ params }) {
       try {
         setRolesLoading(true);
         setRolesError("");
-        const res = await fetch(
-          `/api/discord/guilds/${guildId}/roles`
-        );
+        const res = await fetch(`/api/discord/guilds/${guildId}/roles`);
         let json;
         try {
           json = await res.json();
@@ -525,10 +555,7 @@ export default function NewTicketPanelPage({ params }) {
                   />
                 </div>
                 <div className="sm:w-auto">
-                  <EmojiPicker
-                    value={buttonEmoji}
-                    onChange={setButtonEmoji}
-                  />
+                  <EmojiPicker value={buttonEmoji} onChange={setButtonEmoji} />
                 </div>
               </div>
             </div>
@@ -715,9 +742,7 @@ export default function NewTicketPanelPage({ params }) {
                 <input
                   type="color"
                   value={introEmbed.color}
-                  onChange={(e) =>
-                    updateIntroEmbed("color", e.target.value)
-                  }
+                  onChange={(e) => updateIntroEmbed("color", e.target.value)}
                   className="h-10 w-16 rounded-lg bg-transparent border border-slate-700 cursor-pointer"
                 />
               </div>
@@ -729,9 +754,7 @@ export default function NewTicketPanelPage({ params }) {
                 <input
                   type="text"
                   value={introEmbed.title}
-                  onChange={(e) =>
-                    updateIntroEmbed("title", e.target.value)
-                  }
+                  onChange={(e) => updateIntroEmbed("title", e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500"
                   placeholder="Extra info"
                 />
