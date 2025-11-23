@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Toggle from "@/components/ui/Toggle";
-
 import ChannelDropdown from "@/components/inputs/ChannelDropdown";
 import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
 export default function AuditLoggingTab({ guildId }) {
-  const [channels, setChannels] = useState([]);
+  const [channels, setChannels] = useState(null); // null = not loaded
   const [loading, setLoading] = useState(true);
 
-  // SETTINGS
   const [loggingEnabled, setLoggingEnabled] = useState(true);
   const [logChannel, setLogChannel] = useState(null);
   const [ignoredChannels, setIgnoredChannels] = useState([]);
@@ -20,26 +18,21 @@ export default function AuditLoggingTab({ guildId }) {
     unmute: true,
     ban: true,
     unban: true,
-
     msgUpdate: false,
     msgDelete: false,
     invite: false,
-
     nick: false,
     memberBan: false,
     join: false,
     leave: false,
     memberUnban: false,
     userUpdate: false,
-
     roleCreate: false,
     roleUpdate: false,
     roleDelete: false,
     roleMemberChange: false,
-
     voiceJoin: false,
     voiceLeave: false,
-
     serverEdit: false,
     emojiUpdate: false,
   });
@@ -50,31 +43,43 @@ export default function AuditLoggingTab({ guildId }) {
   });
 
   useEffect(() => {
-    async function load() {
-      const res = await fetch(`/api/discord/guild/${guildId}/channels`);
-      const json = await res.json();
-      if (json.channels) setChannels(json.channels);
-      setLoading(false);
+    async function loadChannels() {
+      try {
+        const res = await fetch(`/api/discord/guild/${guildId}/channels`);
+        const json = await res.json();
+
+        if (json.channels && Array.isArray(json.channels)) {
+          setChannels(json.channels);
+        } else {
+          setChannels([]);
+        }
+      } catch (err) {
+        console.error("Failed to load channels:", err);
+        setChannels([]);
+      } finally {
+        setLoading(false);
+      }
     }
-    load();
+
+    loadChannels();
   }, [guildId]);
 
-  if (loading)
+  if (loading || channels === null) {
     return (
-      <p className="text-slate-300 animate-pulse">
+      <p className="text-slate-300 text-sm animate-pulse">
         Loading channels…
       </p>
     );
+  }
 
   const toggleEvent = (key) =>
-    setEvents({ ...events, [key]: !events[key] });
+    setEvents((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const updateSetting = (key) =>
-    setSettings({ ...settings, [key]: !settings[key] });
+  const toggleSetting = (key) =>
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
 
   return (
     <div className="space-y-10 pb-20">
-
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
@@ -92,10 +97,9 @@ export default function AuditLoggingTab({ guildId }) {
         </div>
       </div>
 
-      {/* MAIN CARD */}
+      {/* MAIN SETTINGS CARD */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-10">
-
-        {/* LOG CHANNEL */}
+        {/* Logging channel */}
         <div className="space-y-2">
           <label className="text-xs text-slate-300">
             Logging Channel <span className="text-red-400">*</span>
@@ -108,57 +112,142 @@ export default function AuditLoggingTab({ guildId }) {
           />
         </div>
 
-        {/* EVENT GROUPS */}
+        {/* Event groups */}
         <div className="grid md:grid-cols-2 gap-12">
-
-          {/* LEFT */}
-          <div className="space-y-10">
-
+          {/* LEFT SIDE */}
+          <div className="space-y-8">
             <EventGroup title="Moderation Events">
-              <ToggleRow label="Member muted" value={events.mute} onClick={() => toggleEvent("mute")} />
-              <ToggleRow label="Member unmuted" value={events.unmute} onClick={() => toggleEvent("unmute")} />
-              <ToggleRow label="Member banned" value={events.ban} onClick={() => toggleEvent("ban")} />
-              <ToggleRow label="Member unbanned" value={events.unban} onClick={() => toggleEvent("unban")} />
+              <ToggleRow
+                label="Member muted"
+                value={events.mute}
+                onChange={() => toggleEvent("mute")}
+              />
+              <ToggleRow
+                label="Member unmuted"
+                value={events.unmute}
+                onChange={() => toggleEvent("unmute")}
+              />
+              <ToggleRow
+                label="Member banned"
+                value={events.ban}
+                onChange={() => toggleEvent("ban")}
+              />
+              <ToggleRow
+                label="Member unbanned"
+                value={events.unban}
+                onChange={() => toggleEvent("unban")}
+              />
             </EventGroup>
 
             <EventGroup title="Message Events">
-              <ToggleRow label="Message updated" value={events.msgUpdate} onClick={() => toggleEvent("msgUpdate")} />
-              <ToggleRow label="Message deleted" value={events.msgDelete} onClick={() => toggleEvent("msgDelete")} />
-              <ToggleRow label="Invite posted" value={events.invite} onClick={() => toggleEvent("invite")} />
+              <ToggleRow
+                label="Message updated"
+                value={events.msgUpdate}
+                onChange={() => toggleEvent("msgUpdate")}
+              />
+              <ToggleRow
+                label="Message deleted"
+                value={events.msgDelete}
+                onChange={() => toggleEvent("msgDelete")}
+              />
+              <ToggleRow
+                label="Invite posted"
+                value={events.invite}
+                onChange={() => toggleEvent("invite")}
+              />
             </EventGroup>
 
             <EventGroup title="Channel Events">
-              <ToggleRow label="Channel created" value={events.roleCreate} onClick={() => toggleEvent("roleCreate")} />
-              <ToggleRow label="Channel updated" value={events.roleUpdate} onClick={() => toggleEvent("roleUpdate")} />
-              <ToggleRow label="Channel deleted" value={events.roleDelete} onClick={() => toggleEvent("roleDelete")} />
+              <ToggleRow
+                label="Channel created"
+                value={events.roleCreate}
+                onChange={() => toggleEvent("roleCreate")}
+              />
+              <ToggleRow
+                label="Channel updated"
+                value={events.roleUpdate}
+                onChange={() => toggleEvent("roleUpdate")}
+              />
+              <ToggleRow
+                label="Channel deleted"
+                value={events.roleDelete}
+                onChange={() => toggleEvent("roleDelete")}
+              />
             </EventGroup>
           </div>
 
-          {/* RIGHT */}
-          <div className="space-y-10">
-
+          {/* RIGHT SIDE */}
+          <div className="space-y-8">
             <EventGroup title="Member Events">
-              <ToggleRow label="Nickname changed" value={events.nick} onClick={() => toggleEvent("nick")} />
-              <ToggleRow label="Member joined" value={events.join} onClick={() => toggleEvent("join")} />
-              <ToggleRow label="Member left" value={events.leave} onClick={() => toggleEvent("leave")} />
-              <ToggleRow label="User updated" value={events.userUpdate} onClick={() => toggleEvent("userUpdate")} />
+              <ToggleRow
+                label="Nickname changed"
+                value={events.nick}
+                onChange={() => toggleEvent("nick")}
+              />
+              <ToggleRow
+                label="Member joined"
+                value={events.join}
+                onChange={() => toggleEvent("join")}
+              />
+              <ToggleRow
+                label="Member left"
+                value={events.leave}
+                onChange={() => toggleEvent("leave")}
+              />
+              <ToggleRow
+                label="User updated"
+                value={events.userUpdate}
+                onChange={() => toggleEvent("userUpdate")}
+              />
             </EventGroup>
 
             <EventGroup title="Role Events">
-              <ToggleRow label="Role created" value={events.roleCreate} onClick={() => toggleEvent("roleCreate")} />
-              <ToggleRow label="Role updated" value={events.roleUpdate} onClick={() => toggleEvent("roleUpdate")} />
-              <ToggleRow label="Role deleted" value={events.roleDelete} onClick={() => toggleEvent("roleDelete")} />
-              <ToggleRow label="Member role changed" value={events.roleMemberChange} onClick={() => toggleEvent("roleMemberChange")} />
+              <ToggleRow
+                label="Role created"
+                value={events.roleCreate}
+                onChange={() => toggleEvent("roleCreate")}
+              />
+              <ToggleRow
+                label="Role updated"
+                value={events.roleUpdate}
+                onChange={() => toggleEvent("roleUpdate")}
+              />
+              <ToggleRow
+                label="Role deleted"
+                value={events.roleDelete}
+                onChange={() => toggleEvent("roleDelete")}
+              />
+              <ToggleRow
+                label="Member roles changed"
+                value={events.roleMemberChange}
+                onChange={() => toggleEvent("roleMemberChange")}
+              />
             </EventGroup>
 
             <EventGroup title="Voice Events">
-              <ToggleRow label="Joined voice" value={events.voiceJoin} onClick={() => toggleEvent("voiceJoin")} />
-              <ToggleRow label="Left voice" value={events.voiceLeave} onClick={() => toggleEvent("voiceLeave")} />
+              <ToggleRow
+                label="Joined voice"
+                value={events.voiceJoin}
+                onChange={() => toggleEvent("voiceJoin")}
+              />
+              <ToggleRow
+                label="Left voice"
+                value={events.voiceLeave}
+                onChange={() => toggleEvent("voiceLeave")}
+              />
             </EventGroup>
 
             <EventGroup title="Server Events">
-              <ToggleRow label="Server edited" value={events.serverEdit} onClick={() => toggleEvent("serverEdit")} />
-              <ToggleRow label="Emojis updated" value={events.emojiUpdate} onClick={() => toggleEvent("emojiUpdate")} />
+              <ToggleRow
+                label="Server edited"
+                value={events.serverEdit}
+                onChange={() => toggleEvent("serverEdit")}
+              />
+              <ToggleRow
+                label="Emojis updated"
+                value={events.emojiUpdate}
+                onChange={() => toggleEvent("emojiUpdate")}
+              />
             </EventGroup>
           </div>
         </div>
@@ -166,13 +255,12 @@ export default function AuditLoggingTab({ guildId }) {
 
       {/* IGNORED CHANNELS */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
-
         <div>
           <h3 className="text-base font-semibold text-slate-50">
             Ignored Channels
           </h3>
           <p className="text-xs text-slate-400">
-            Actions inside these channels will not be logged.
+            Actions inside these channels will be ignored by logging.
           </p>
         </div>
 
@@ -182,16 +270,16 @@ export default function AuditLoggingTab({ guildId }) {
           onChange={setIgnoredChannels}
         />
 
-        <div className="space-y-2 pt-4">
+        <div className="space-y-2 pt-4 border-t border-slate-800">
           <ToggleRow
             label="Ignore bot actions"
             value={settings.ignoreBots}
-            onClick={() => updateSetting("ignoreBots")}
+            onChange={() => toggleSetting("ignoreBots")}
           />
           <ToggleRow
             label="Hide user thumbnails"
             value={settings.noThumbs}
-            onClick={() => updateSetting("noThumbs")}
+            onChange={() => toggleSetting("noThumbs")}
           />
         </div>
       </section>
@@ -210,10 +298,10 @@ function EventGroup({ title, children }) {
   );
 }
 
-function ToggleRow({ label, value, onClick }) {
+function ToggleRow({ label, value, onChange }) {
   return (
     <div className="flex items-center gap-3">
-      <Toggle value={value} onChange={onClick} />
+      <Toggle value={value} onChange={onChange} />
       <span className="text-sm text-slate-200">{label}</span>
     </div>
   );
