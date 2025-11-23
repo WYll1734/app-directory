@@ -13,7 +13,7 @@ import AchievementsTabs from "@/components/achievements/AchievementsTabs";
 const tierIcons = {
   bronze: "/Bronze.png",
   silver: "/Silver.png",
-  gold: "/gold.png",       // your screenshot shows lowercase "gold.png"
+  gold: "/gold.png", // your screenshot shows lowercase "gold.png"
   diamond: "/Diamond.png",
 };
 
@@ -97,15 +97,33 @@ const tierOrder = ["bronze", "silver", "gold", "diamond"];
 // ---------------------------------------------------------------------------
 function Toggle({ checked, onChange }) {
   return (
-    <label className="relative inline-flex cursor-pointer items-center shrink-0">
+    <label className="relative inline-flex items-center cursor-pointer select-none">
       <input
         type="checkbox"
-        className="peer sr-only"
+        className="sr-only peer"
         checked={checked}
         onChange={onChange}
       />
-      <div className="peer h-5 w-9 rounded-full bg-slate-600 peer-checked:bg-blue-500 transition-all" />
-      <div className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white peer-checked:translate-x-4 transition-all shadow" />
+
+      {/* Track */}
+      <div
+        className="
+        w-10 h-5 rounded-full 
+        bg-slate-600 
+        peer-checked:bg-blue-500
+        transition-colors duration-200
+      "
+      ></div>
+
+      {/* Knob */}
+      <div
+        className="
+        absolute left-0.5 top-0.5 
+        w-4 h-4 rounded-full bg-white shadow 
+        transition-all duration-200
+        peer-checked:translate-x-5
+      "
+      ></div>
     </label>
   );
 }
@@ -495,7 +513,7 @@ export default function AchievementEditorPage({ params }) {
 
                     {/* Body */}
                     <div
-                      className={`border-t border-slate-800 overflow-hidden transition-all duration-300 ${
+                      className={`border-t border-slate-800 overflow-visible transition-all duration-300 ${
                         open ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
                       }`}
                     >
