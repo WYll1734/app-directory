@@ -35,7 +35,7 @@ const TIER_CONFIG = [
   },
 ];
 
-// 4 options to match your overview (messages / reactions / voice / threads)
+// 4 options to match overview (messages / reactions / voice / threads)
 const ACTION_OPTIONS = [
   { id: "messages", label: "Member sends [count] messages" },
   { id: "reactions", label: "Member adds [count] reactions" },
@@ -62,7 +62,11 @@ export default function AchievementEditorPage({ params }) {
     fetcher
   );
 
-  const roles = Array.isArray(rolesData) ? rolesData : [];
+  // handle either:  [ {id, name}, ... ]  OR  { roles: [ ... ] }
+  const rolesRaw = rolesData && Array.isArray(rolesData.roles)
+    ? rolesData.roles
+    : rolesData;
+  const roles = Array.isArray(rolesRaw) ? rolesRaw : [];
 
   // ---------------------------------------------------------------------------
   // MOCKED ACHIEVEMENT – replace with real fetch later
@@ -84,7 +88,7 @@ export default function AchievementEditorPage({ params }) {
           removeRole: false,
           giveXP: false,
           giveCoins: false,
-          roleId: null, // role linked to this tier (if any)
+          roleId: null,
         },
       })),
       settings: {
@@ -103,8 +107,16 @@ export default function AchievementEditorPage({ params }) {
   const [name, setName] = useState(initialAchievement.name);
   const [serverProgress] = useState(initialAchievement.serverProgress);
   const [actionType, setActionType] = useState(initialAchievement.actionType);
+
   const [overrideAnnouncement, setOverrideAnnouncement] = useState(
     initialAchievement.overrideAnnouncement
+  );
+  const [showEmbedEditor, setShowEmbedEditor] = useState(false);
+  const [embedTitle, setEmbedTitle] = useState(
+    "GG {player}, you just unlocked an achievement!"
+  );
+  const [embedDescription, setEmbedDescription] = useState(
+    "You just unlocked **{achievement}** – keep grinding!"
   );
 
   const [tiers, setTiers] = useState(initialAchievement.tiers);
@@ -161,15 +173,7 @@ export default function AchievementEditorPage({ params }) {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      // Wire up to backend later
-      // console.log({
-      //   id: achievementId,
-      //   name,
-      //   actionType,
-      //   overrideAnnouncement,
-      //   tiers,
-      //   settings,
-      // });
+      // hook to backend later
     }, 750);
   }
 
@@ -245,7 +249,7 @@ export default function AchievementEditorPage({ params }) {
         <div className="mx-auto flex max-w-5xl flex-col gap-5">
           {/* ACHIEVEMENT PROGRESS + ACTION */}
           <section className="rounded-xl border border-slate-900 bg-[#10141f] p-5 shadow-sm">
-            {/* progress block */}
+            {/* progress */}
             <div className="mb-6 rounded-lg bg-[#151927] p-4">
               <p className="text-sm font-semibold text-slate-100">
                 Achievement progress
@@ -296,7 +300,7 @@ export default function AchievementEditorPage({ params }) {
               </div>
             </div>
 
-            {/* override announcement toggle */}
+            {/* override announcement */}
             <div className="mt-6 rounded-lg bg-[#151927] px-4 py-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -310,41 +314,84 @@ export default function AchievementEditorPage({ params }) {
                 </div>
                 <Toggle
                   enabled={overrideAnnouncement}
-                  onChange={setOverrideAnnouncement}
+                  onChange={(val) => {
+                    setOverrideAnnouncement(val);
+                    if (!val) setShowEmbedEditor(false);
+                  }}
                 />
               </div>
 
-              {/* override embed preview when enabled */}
               {overrideAnnouncement && (
                 <div className="mt-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500" />
-                    <div className="flex-1 space-y-1">
-                      <div className="rounded-lg bg-[#050816] px-3 py-2 text-xs text-slate-100">
-                        <p className="mb-1 text-[10px] text-slate-400">
-                          Blade Master{" "}
-                          <span className="ml-1 rounded-sm bg-indigo-600 px-1 text-[9px] uppercase tracking-wide text-white">
-                            BOT
-                          </span>{" "}
-                          · Today at 9:09 PM
-                        </p>
-                        <p>
-                          GG{" "}
-                          <span className="text-indigo-300">
-                            {"{player}"}
-                          </span>
-                          , you just unlocked the achievement:{" "}
-                          <span className="font-semibold text-slate-50">
-                            {"{achievement}"}
-                          </span>
-                          !
-                        </p>
+                  {!showEmbedEditor && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEmbedEditor(true)}
+                      className="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-800"
+                    >
+                      + Add embed
+                    </button>
+                  )}
+
+                  {showEmbedEditor && (
+                    <>
+                      {/* simple embed editor */}
+                      <div className="rounded-lg border border-slate-800 bg-[#050816] p-4">
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              Embed title
+                            </p>
+                            <input
+                              value={embedTitle}
+                              onChange={(e) => setEmbedTitle(e.target.value)}
+                              className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 outline-none focus:border-slate-500"
+                            />
+                          </div>
+
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              Embed description
+                            </p>
+                            <textarea
+                              value={embedDescription}
+                              onChange={(e) =>
+                                setEmbedDescription(e.target.value)
+                              }
+                              rows={3}
+                              className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 outline-none focus:border-slate-500"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <button className="inline-flex items-center rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-100 hover:bg-slate-800">
-                    + Add embed
-                  </button>
+
+                      {/* preview */}
+                      <div className="flex items-start gap-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500" />
+                        <div className="flex-1 space-y-1">
+                          <div className="rounded-lg bg-[#050816] px-3 py-2 text-xs text-slate-100">
+                            <p className="mb-1 text-[10px] text-slate-400">
+                              ServerMate Bot{" "}
+                              <span className="ml-1 rounded-sm bg-indigo-600 px-1 text-[9px] uppercase tracking-wide text-white">
+                                BOT
+                              </span>{" "}
+                              · Today
+                            </p>
+                            {embedTitle && (
+                              <p className="font-semibold text-slate-50">
+                                {embedTitle}
+                              </p>
+                            )}
+                            {embedDescription && (
+                              <p className="mt-1 whitespace-pre-wrap text-slate-100">
+                                {embedDescription}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -369,7 +416,7 @@ export default function AchievementEditorPage({ params }) {
                         : "border-transparent",
                     ].join(" ")}
                   >
-                    {/* header row */}
+                    {/* header */}
                     <button
                       type="button"
                       onClick={() =>
@@ -397,7 +444,7 @@ export default function AchievementEditorPage({ params }) {
                       </div>
                     </button>
 
-                    {/* expanded body */}
+                    {/* body */}
                     {expanded && (
                       <div className="border-t border-slate-800 px-4 pb-4 pt-3">
                         {/* customize badge + count */}
@@ -556,7 +603,7 @@ export default function AchievementEditorPage({ params }) {
 // SMALL COMPONENTS
 // ---------------------------------------------------------------------------
 
-// New MEE6-style toggle (no text, blue pill with white knob)
+// Blue pill toggle
 function Toggle({ enabled, onChange }) {
   return (
     <button
