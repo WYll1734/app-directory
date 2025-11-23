@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
+import RoleMultiSelect from "@/components/inputs/RoleMultiSelect";
 
 export default function RuleEditLayout({ guildId, ruleConfig }) {
   const {
@@ -15,9 +16,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // -----------------------------------------
-  // FETCH ROLES + CHANNELS
-  // -----------------------------------------
+  // --- Fetch Roles + Channels ---
   const fetcher = (url) => fetch(url).then((r) => r.json());
 
   const { data: rolesData } = useSWR(
@@ -32,10 +31,8 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
   const roles = rolesData || [];
   const channels = channelsData || [];
 
-  // -----------------------------------------
-  // LOCAL STATE
-  // -----------------------------------------
-  const [selectedRole, setSelectedRole] = useState("");
+  // --- Local State ---
+  const [selectedRole, setSelectedRole] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState("");
 
   return (
@@ -73,26 +70,21 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
         {/* Role permissions */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
+          <h3 className="text-sm font-medium text-slate-300">
+            Role permissions
+          </h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" defaultChecked />
             Deny for all roles except
           </label>
 
-          {/* REAL ROLE SELECT */}
-          <select
-            className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200"
+          {/* Multi-select role selector */}
+          <RoleMultiSelect
+            roles={roles}
             value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-          >
-            <option value="">Select a role...</option>
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedRole}
+          />
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" />
@@ -111,7 +103,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all channels except
           </label>
 
-          {/* REAL CHANNEL SELECT */}
+          {/* Real channel select */}
           <select
             className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200"
             value={selectedChannel}
@@ -120,7 +112,9 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             <option value="">Select a channel...</option>
 
             {channels
-              .filter((c) => c.type === 0 || c.type === 5 || c.type === 15) // text / announcement / forum
+              .filter(
+                (c) => c.type === 0 || c.type === 5 || c.type === 15 // text / announcement / forum
+              )
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   #{c.name}
@@ -135,10 +129,9 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* Rule-specific extra settings */}
+      {/* Additional settings */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
-
         {extraFields}
       </div>
 
