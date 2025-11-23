@@ -16,22 +16,23 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // --- Fetch Roles + Channels ---
+  // Fetch helper
   const fetcher = (url) => fetch(url).then((r) => r.json());
 
+  // Correct API paths (guilds/***)
   const { data: rolesData } = useSWR(
-    `/api/discord/guild/${guildId}/roles`,
+    `/api/discord/guilds/${guildId}/roles`,
     fetcher
   );
+
   const { data: channelsData } = useSWR(
-    `/api/discord/guild/${guildId}/channels`,
+    `/api/discord/guilds/${guildId}/channels`,
     fetcher
   );
 
-  const roles = rolesData || [];
-  const channels = channelsData || [];
+  const roles = rolesData?.roles || [];
+  const channels = channelsData?.channels || [];
 
-  // --- Local State ---
   const [selectedRole, setSelectedRole] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState("");
 
@@ -46,6 +47,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           >
             ← Back to AutoMod
           </Link>
+
           <div>
             <h1 className="text-xl font-semibold text-slate-100">{title}</h1>
             {description && (
@@ -70,16 +72,14 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
         {/* Role permissions */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-slate-300">
-            Role permissions
-          </h3>
+          <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
 
           <label className="flex items-center gap-2 text-sm text-slate-300">
             <input type="radio" name="rolePerms" defaultChecked />
             Deny for all roles except
           </label>
 
-          {/* Multi-select role selector */}
+          {/* Multi-Select Role Picker */}
           <RoleMultiSelect
             roles={roles}
             value={selectedRole}
@@ -103,7 +103,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             Deny for all channels except
           </label>
 
-          {/* Real channel select */}
+          {/* Channel select (real data) */}
           <select
             className="w-full rounded-lg bg-slate-800 border border-slate-700 p-2 text-sm text-slate-200"
             value={selectedChannel}
@@ -113,7 +113,10 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
 
             {channels
               .filter(
-                (c) => c.type === 0 || c.type === 5 || c.type === 15 // text / announcement / forum
+                (c) =>
+                  c.type === 0 || // text
+                  c.type === 5 || // announcement
+                  c.type === 15  // forum
               )
               .map((c) => (
                 <option key={c.id} value={c.id}>
@@ -129,13 +132,13 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* Additional settings */}
+      {/* Additional settings (from rule config) */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
         {extraFields}
       </div>
 
-      {/* Demo section */}
+      {/* Demo */}
       <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 flex flex-col gap-4">
         <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
@@ -144,7 +147,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         <div>
           <p className="text-xs text-slate-400 mb-1">Exact match</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
-            <b>ServerMate</b>{" "}
+            <b>ServerMate</b>
             <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
             <br />
             {demoExactLabel}
@@ -154,7 +157,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         <div>
           <p className="text-xs text-slate-400 mb-1">Match any part</p>
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-200">
-            <b>ServerMate</b>{" "}
+            <b>ServerMate</b>
             <span className="text-indigo-400 ml-1 text-[11px]">BOT</span>
             <br />
             {demoAnyLabel}
