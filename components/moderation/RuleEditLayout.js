@@ -8,6 +8,7 @@ import ChannelMultiSelect from "@/components/inputs/ChannelMultiSelect";
 
 export default function RuleEditLayout({ guildId, ruleConfig }) {
   const {
+    id,
     title,
     description,
     extraFields,
@@ -16,70 +17,65 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
     demoAnyLabel,
   } = ruleConfig;
 
-  // DATA STATE
   const [roles, setRoles] = useState([]);
   const [channels, setChannels] = useState([]);
 
-  // USER SELECTIONS
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
-  // LOAD ROLES + CHANNELS
+  // ================================
+  // Fetch roles & channels
+  // ================================
   useEffect(() => {
-    let cancelled = false;
+    let cancel = false;
 
-    async function load() {
+    async function loadAll() {
       setLoading(true);
 
       try {
         const [rolesRes, channelsRes] = await Promise.all([
-          fetch(`/api/discord/guild/${guildId}/roles`),
-          fetch(`/api/discord/guild/${guildId}/channels`),
+          fetch(`/api/discord/guilds/${guildId}/roles`),
+          fetch(`/api/discord/guilds/${guildId}/channels`),
         ]);
 
         const rolesJson = await rolesRes.json();
         const channelsJson = await channelsRes.json();
 
-        if (!cancelled) {
-          const sortedRoles = Array.isArray(rolesJson.roles)
+        if (cancel) return;
+
+        setRoles(
+          Array.isArray(rolesJson.roles)
             ? [...rolesJson.roles].sort((a, b) => b.position - a.position)
-            : [];
+            : []
+        );
 
-          const channelList = Array.isArray(channelsJson.channels)
-            ? channelsJson.channels
-            : [];
-
-          setRoles(sortedRoles);
-          setChannels(channelList);
-        }
+        setChannels(Array.isArray(channelsJson.channels) ? channelsJson.channels : []);
       } catch (e) {
-        console.error("Failed loading guild data:", e);
-        if (!cancelled) {
+        console.error("Failed to load:", e);
+        if (!cancel) {
           setRoles([]);
           setChannels([]);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancel) setLoading(false);
       }
     }
 
-    load();
-    return () => {
-      cancelled = true;
-    };
+    loadAll();
+    return () => (cancel = true);
   }, [guildId]);
 
   if (loading) {
     return (
-      <p className="text-slate-300 text-sm animate-pulse">Loading server…</p>
+      <p className="text-slate-300 text-sm animate-pulse">Loading permissions…</p>
     );
   }
 
   return (
     <div className="flex flex-col gap-8 pb-20">
-      {/* HEADER */}
+      {/* ====================== HEADER ====================== */}
       <div className="flex items-start justify-between">
         <div>
           <Link
@@ -89,14 +85,10 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
             ← Back to AutoMod
           </Link>
 
-          <h1 className="mt-2 text-xl font-semibold text-slate-100">
-            {title}
-          </h1>
+          <h1 className="mt-2 text-xl font-semibold text-slate-100">{title}</h1>
 
           {description && (
-            <p className="text-xs text-slate-400 max-w-2xl mt-1">
-              {description}
-            </p>
+            <p className="text-xs text-slate-400 max-w-2xl mt-1">{description}</p>
           )}
         </div>
 
@@ -110,18 +102,19 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </div>
 
-      {/* PERMISSIONS */}
+      {/* ====================== PERMISSIONS CARD ====================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-8">
+
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-slate-200">Permissions</h2>
           <p className="text-[11px] text-slate-500">
             {selectedRoles.length} role{selectedRoles.length !== 1 && "s"} ·{" "}
             {selectedChannels.length} channel
-            {selectedChannels.length !== 1 && "s"} selected
+            {selectedChannels.length !== 1 && "s"}
           </p>
         </div>
 
-        {/* ROLE PERMISSION BLOCK */}
+        {/* ====================== Role Permissions ====================== */}
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-slate-300">Role permissions</h3>
 
@@ -142,7 +135,7 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
           </label>
         </div>
 
-        {/* CHANNEL PERMISSION BLOCK */}
+        {/* ====================== Channel Permissions ====================== */}
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-slate-300">Channel permissions</h3>
 
@@ -164,13 +157,13 @@ export default function RuleEditLayout({ guildId, ruleConfig }) {
         </div>
       </section>
 
-      {/* ADDITIONAL SETTINGS */}
+      {/* ====================== Additional Settings ====================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
         <h2 className="font-semibold text-slate-200">Additional settings</h2>
         {extraFields}
       </section>
 
-      {/* DEMO */}
+      {/* ====================== DEMO PREVIEW ====================== */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 space-y-6">
         <h2 className="font-semibold text-slate-200">How does it work?</h2>
 
