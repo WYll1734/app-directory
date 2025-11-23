@@ -19,8 +19,7 @@ export default function WelcomeChannelPage({ params }) {
     setTimeout(() => {
       setSaving(false);
       setSaved(true);
-
-      setTimeout(() => setSaved(false), 1300);
+      setTimeout(() => setSaved(false), 1200);
     }, 900);
   };
 
@@ -40,29 +39,29 @@ export default function WelcomeChannelPage({ params }) {
     footerIcon: "",
   });
 
-  const update = (field, value) =>
-    setEmbed((prev) => ({ ...prev, [field]: value }));
+  const update = (key, value) =>
+    setEmbed((prev) => ({ ...prev, [key]: value }));
 
   // =========================================
-  // CHANNEL SELECT DROPDOWN (API)
+  // CHANNEL SELECT
   // =========================================
   const [channels, setChannels] = useState([]);
   const [loadingChannels, setLoadingChannels] = useState(true);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState("create");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    async function getChannels() {
+    async function fetchChannels() {
       try {
         const res = await fetch(`/api/discord/guilds/${guildId}/channels`);
         const data = await res.json();
         if (data.ok) setChannels(data.channels);
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
+        console.error("Failed to fetch channels:", err);
       }
       setLoadingChannels(false);
     }
-    getChannels();
+    fetchChannels();
   }, [guildId]);
 
   const presetColors = [
@@ -75,7 +74,7 @@ export default function WelcomeChannelPage({ params }) {
   ];
 
   // =========================================
-  // PAGE RENDER
+  // RENDER
   // =========================================
   return (
     <div className="space-y-8">
@@ -89,20 +88,27 @@ export default function WelcomeChannelPage({ params }) {
           </p>
         </div>
 
-        <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
-          Publish
+        <button
+          onClick={runSave}
+          disabled={saving}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            saved
+              ? "bg-emerald-500 text-slate-900"
+              : "bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60"
+          }`}
+        >
+          {saving ? "Saving…" : saved ? "Saved!" : "Publish"}
         </button>
       </div>
 
       {/* CHANNEL SELECTOR */}
       <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
-        <h2 className="text-sm font-semibold text-slate-200">
-          Choose your Welcome Channel
-        </h2>
+        <h2 className="text-sm font-semibold text-slate-200">Choose your Welcome Channel</h2>
 
         <div className="mt-4 relative">
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            type="button"
+            onClick={() => setDropdownOpen((o) => !o)}
             className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-950/70 px-4 py-2 text-sm text-slate-200"
           >
             <span>
@@ -122,17 +128,18 @@ export default function WelcomeChannelPage({ params }) {
                 </div>
               )}
 
-              {/* CREATE OPTION */}
+              {/* Create */}
               <button
+                type="button"
+                onClick={() => {
+                  setSelectedChannel("create");
+                  setDropdownOpen(false);
+                }}
                 className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
                   selectedChannel === "create"
                     ? "text-indigo-400"
                     : "text-slate-200"
                 }`}
-                onClick={() => {
-                  setSelectedChannel("create");
-                  setDropdownOpen(false);
-                }}
               >
                 Create #welcome channel (recommended)
                 {selectedChannel === "create" && (
@@ -140,7 +147,7 @@ export default function WelcomeChannelPage({ params }) {
                 )}
               </button>
 
-              {/* CATEGORIES */}
+              {/* Categories */}
               {channels
                 .filter((c) => c.type === 4)
                 .map((cat) => (
@@ -154,42 +161,42 @@ export default function WelcomeChannelPage({ params }) {
                       .map((ch) => (
                         <button
                           key={ch.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedChannel(`#${ch.name}`);
+                            setDropdownOpen(false);
+                          }}
                           className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
                             selectedChannel === `#${ch.name}`
                               ? "text-indigo-400"
                               : "text-slate-200"
                           }`}
-                          onClick={() => {
-                            setSelectedChannel(`#${ch.name}`);
-                            setDropdownOpen(false);
-                          }}
                         >
                           #{ch.name}
                           {selectedChannel === `#${ch.name}` && (
-                            <span className="text-xs text-indigo-400">
-                              Selected
-                            </span>
+                            <span className="text-xs text-indigo-400">Selected</span>
                           )}
                         </button>
                       ))}
                   </div>
                 ))}
 
-              {/* UNCATEGORIZED */}
+              {/* Uncategorized */}
               {channels
                 .filter((c) => c.type === 0 && !c.parent_id)
                 .map((ch) => (
                   <button
                     key={ch.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedChannel(`#${ch.name}`);
+                      setDropdownOpen(false);
+                    }}
                     className={`flex w-full items-center justify-between px-4 py-2 hover:bg-slate-800 ${
                       selectedChannel === `#${ch.name}`
                         ? "text-indigo-400"
                         : "text-slate-200"
                     }`}
-                    onClick={() => {
-                      setSelectedChannel(`#${ch.name}`);
-                      setDropdownOpen(false);
-                    }}
                   >
                     #{ch.name}
                     {selectedChannel === `#${ch.name}` && (
@@ -210,9 +217,7 @@ export default function WelcomeChannelPage({ params }) {
 
         {/* COLOR PICKER */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-slate-200">
-            Color
-          </label>
+          <label className="block text-sm font-semibold text-slate-200">Color</label>
           <div className="mt-2 flex items-center gap-3">
             <input
               type="color"
@@ -220,11 +225,13 @@ export default function WelcomeChannelPage({ params }) {
               onChange={(e) => update("color", e.target.value)}
               className="h-8 w-10 cursor-pointer rounded-md border border-slate-700 bg-slate-950"
             />
+
             <input
               value={embed.color}
               onChange={(e) => update("color", e.target.value)}
               className="w-28 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100"
             />
+
             {presetColors.map((c) => (
               <button
                 key={c}
@@ -267,10 +274,64 @@ export default function WelcomeChannelPage({ params }) {
           <textarea
             value={embed.description}
             onChange={(e) => update("description", e.target.value)}
-            placeholder={"Welcome to {server} {username}!"}
+            placeholder="Welcome to {server} {username}!"
             className="mt-1 h-40 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
           />
         </div>
+
+        {/* AUTHOR */}
+        <details className="group mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+          <summary className="cursor-pointer text-sm text-slate-300 group-open:text-indigo-400">
+            + Author
+          </summary>
+
+          <div className="mt-3 space-y-3 text-xs text-slate-300">
+            <div>
+              <label>Author Name</label>
+              <input
+                value={embed.authorName}
+                onChange={(e) => update("authorName", e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label>Author Icon</label>
+              <input
+                value={embed.authorIcon}
+                onChange={(e) => update("authorIcon", e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        </details>
+
+        {/* IMAGES */}
+        <details className="group mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+          <summary className="cursor-pointer text-sm text-slate-300 group-open:text-indigo-400">
+            + Images (Thumbnail + Main Image)
+          </summary>
+
+          <div className="mt-3 space-y-3 text-xs text-slate-300">
+            <div>
+              <label>Thumbnail URL</label>
+              <input
+                value={embed.thumb}
+                onChange={(e) => update("thumb", e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label>Main Image URL</label>
+              <input
+                value={embed.image}
+                onChange={(e) => update("image", e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        </details>
 
         {/* FOOTER */}
         <details className="group mb-3 rounded-lg border border-slate-800 bg-slate-950/50 p-3">
@@ -289,7 +350,7 @@ export default function WelcomeChannelPage({ params }) {
             </div>
 
             <div>
-              <label>Footer Icon</label>
+              <label>Footer Icon URL</label>
               <input
                 value={embed.footerIcon}
                 onChange={(e) => update("footerIcon", e.target.value)}
@@ -321,6 +382,7 @@ export default function WelcomeChannelPage({ params }) {
           <p className="text-sm text-slate-400">
             <span className="font-semibold text-slate-100">ServerMate Bot</span> • Today
           </p>
+
           <div className="mt-3 flex gap-3">
             <div
               className="flex-1 rounded-lg border border-slate-700 bg-slate-900 p-4"
@@ -329,15 +391,73 @@ export default function WelcomeChannelPage({ params }) {
                 borderLeftColor: embed.color,
               }}
             >
-              {embed.title && (
-                <p className="text-sm font-semibold text-slate-100">{embed.title}</p>
+
+              {/* AUTHOR */}
+              {(embed.authorName || embed.authorIcon) && (
+                <div className="mb-2 flex items-center gap-2 text-xs text-slate-300">
+                  {embed.authorIcon && (
+                    <img
+                      src={embed.authorIcon}
+                      alt="Author Icon"
+                      className="h-5 w-5 rounded-full"
+                    />
+                  )}
+                  {embed.authorName}
+                </div>
               )}
+
+              {/* TITLE */}
+              {embed.title && (
+                <p className="text-sm font-semibold text-slate-100">
+                  {embed.url ? (
+                    <a href={embed.url} target="_blank" className="text-sky-400 hover:underline">
+                      {embed.title}
+                    </a>
+                  ) : (
+                    embed.title
+                  )}
+                </p>
+              )}
+
+              {/* DESCRIPTION */}
               {embed.description && (
                 <p className="mt-2 whitespace-pre-line text-slate-300">
                   {embed.description}
                 </p>
               )}
+
+              {/* IMAGE */}
+              {embed.image && (
+                <img
+                  src={embed.image}
+                  alt="Main embed"
+                  className="mt-3 rounded-md max-h-60 object-cover"
+                />
+              )}
+
+              {/* FOOTER */}
+              {(embed.footerText || embed.footerIcon) && (
+                <div className="mt-3 flex items-center gap-2 border-t border-slate-800 pt-2 text-[11px] text-slate-400">
+                  {embed.footerIcon && (
+                    <img
+                      src={embed.footerIcon}
+                      alt="Footer Icon"
+                      className="h-4 w-4 rounded-full"
+                    />
+                  )}
+                  <span>{embed.footerText}</span>
+                </div>
+              )}
             </div>
+
+            {/* THUMBNAIL */}
+            {embed.thumb && (
+              <img
+                src={embed.thumb}
+                alt="Thumbnail"
+                className="h-16 w-16 rounded-md object-cover shrink-0 mt-1"
+              />
+            )}
           </div>
         </div>
 
