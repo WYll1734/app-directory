@@ -7,18 +7,23 @@ export default function ChannelDropdown({ channels = [], value, onChange }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
+  // ==============================
+  // Group + filter channels
+  // ==============================
   const grouped = useMemo(() => {
     const groups = { text: [], voice: [], categories: [], other: [] };
 
     channels.forEach((ch) => {
-      if (ch.type === 0) groups.text.push(ch);
-      else if (ch.type === 2) groups.voice.push(ch);
-      else if (ch.type === 4) groups.categories.push(ch);
+      if (ch.type === 0) groups.text.push(ch); // Text
+      else if (ch.type === 2) groups.voice.push(ch); // Voice
+      else if (ch.type === 4) groups.categories.push(ch); // Category
       else groups.other.push(ch);
     });
 
     const applySearch = (list) =>
-      list.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()));
+      list.filter((c) =>
+        c.name.toLowerCase().includes(query.toLowerCase())
+      );
 
     return {
       text: applySearch(groups.text),
@@ -28,6 +33,9 @@ export default function ChannelDropdown({ channels = [], value, onChange }) {
     };
   }, [channels, query]);
 
+  // ==============================
+  // Helpers
+  // ==============================
   const iconFor = (type) => {
     if (type === 2) return <Volume2 size={14} className="text-blue-300" />;
     if (type === 4) return <FolderIcon size={14} className="text-yellow-300" />;
@@ -42,28 +50,42 @@ export default function ChannelDropdown({ channels = [], value, onChange }) {
     <span className="text-slate-400 text-sm">Select a channel…</span>
   );
 
+  // ==============================
+  // HANDLE SELECTION
+  // ==============================
   const handleSelect = (ch) => {
     onChange(ch);
-    setOpen(false);
-    setQuery("");
+    setOpen(false); // auto-close on pick
   };
 
   return (
     <div className="relative w-full">
+      {/* Trigger */}
       <div
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full bg-slate-800/70 border border-slate-700 rounded-lg px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-700/60 transition"
+        className="w-full bg-slate-800/70 border border-slate-700 rounded-lg px-3 py-2
+                   flex items-center justify-between cursor-pointer transition
+                   hover:bg-slate-700/60"
       >
         {selectedLabel}
-        <ChevronDown size={16} className="text-slate-400" />
+        <ChevronDown
+          size={16}
+          className={`text-slate-400 transition-transform ${
+            open ? "rotate-180" : "rotate-0"
+          }`}
+        />
       </div>
 
+      {/* Dropdown menu */}
       {open && (
-        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg max-h-72 overflow-y-auto shadow-xl">
+        <div className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700
+                        rounded-lg max-h-72 overflow-y-auto shadow-xl animate-in fade-in slide-in-from-top-1">
+          
           {/* Search */}
           <div className="p-2 border-b border-slate-800">
             <input
-              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700 text-sm text-slate-200 placeholder-slate-500"
+              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-700
+                         text-sm text-slate-200 placeholder-slate-500"
               placeholder="Search channels..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -74,29 +96,32 @@ export default function ChannelDropdown({ channels = [], value, onChange }) {
             title="TEXT CHANNELS"
             list={grouped.text}
             iconFor={iconFor}
-            onSelect={handleSelect}
             disabled={false}
+            onSelect={handleSelect}
           />
+
           <DropdownSection
             title="VOICE CHANNELS"
             list={grouped.voice}
             iconFor={iconFor}
-            onSelect={handleSelect}
             disabled={false}
+            onSelect={handleSelect}
           />
+
           <DropdownSection
             title="CATEGORIES"
             list={grouped.categories}
             iconFor={iconFor}
+            disabled={true} // cannot pick categories
             onSelect={handleSelect}
-            disabled={true}
           />
+
           <DropdownSection
             title="OTHER"
             list={grouped.other}
             iconFor={iconFor}
-            onSelect={handleSelect}
             disabled={false}
+            onSelect={handleSelect}
           />
 
           {grouped.text.length === 0 &&
@@ -113,12 +138,13 @@ export default function ChannelDropdown({ channels = [], value, onChange }) {
   );
 }
 
-function DropdownSection({ title, list, iconFor, onSelect, disabled }) {
+function DropdownSection({ title, list, iconFor, disabled, onSelect }) {
   if (!list || list.length === 0) return null;
 
   return (
     <div className="p-2">
-      <p className="text-xs text-slate-500 mb-1 px-1">{title}</p>
+      <p className="text-xs text-slate-500 mb-1 px-1 uppercase tracking-wide">{title}</p>
+
       {list.map((ch) => {
         const content = (
           <>
@@ -131,7 +157,8 @@ function DropdownSection({ title, list, iconFor, onSelect, disabled }) {
           return (
             <div
               key={ch.id}
-              className="px-3 py-2 rounded-md flex items-center gap-2 text-slate-500 text-sm cursor-not-allowed opacity-60"
+              className="px-3 py-2 rounded-md flex items-center gap-2 text-slate-500
+                         text-sm cursor-not-allowed opacity-50"
             >
               {content}
             </div>
@@ -140,10 +167,11 @@ function DropdownSection({ title, list, iconFor, onSelect, disabled }) {
 
         return (
           <button
-            type="button"
             key={ch.id}
+            type="button"
             onClick={() => onSelect(ch)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-left rounded-md text-sm text-slate-200 hover:bg-slate-800"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm
+                       text-slate-200 hover:bg-slate-800 transition"
           >
             {content}
           </button>
