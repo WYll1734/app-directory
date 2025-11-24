@@ -1,111 +1,141 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { ArrowLeft, PlusCircle, Edit, Trash2 } from "lucide-react";
+import { useState } from "react";
+import {
+  Pencil,
+  Trash2,
+  Copy,
+  PlusCircle,
+  ChevronRight,
+  PanelRight,
+} from "lucide-react";
 
 export default function TicketPanelsPage({ params }) {
   const { guildId } = params;
 
-  // Placeholder data — replace with API call later
-  const [panels, setPanels] = useState([]);
+  // TEMP FAKE DATA — will be DB-driven later
+  const [panels, setPanels] = useState([
+    {
+      id: "abc123",
+      name: "Support Tickets",
+      createdAt: "2025-01-17",
+      channel: "general",
+      buttonEmoji: "🎫",
+      buttonText: "Create Ticket",
+    },
+    {
+      id: "def456",
+      name: "Staff Applications",
+      createdAt: "2025-01-18",
+      channel: "applications",
+      buttonEmoji: "📝",
+      buttonText: "Apply",
+    },
+  ]);
 
-  useEffect(() => {
-    // Fake placeholder (delete once API exists)
-    setPanels([
-      {
-        id: "support-main",
-        name: "Support Tickets",
-        description: "General support for members.",
-        color: "#5865F2",
-      },
-      {
-        id: "staff-help",
-        name: "Staff Helpdesk",
-        description: "Internal staff ticket panel.",
-        color: "#43B581",
-      },
-    ]);
-  }, []);
+  const copyId = (id) => {
+    navigator.clipboard.writeText(id);
+  };
 
   return (
     <div className="p-6 space-y-8">
-
-      {/* =======================================================
-          BACK BUTTON + HEADER
-      ======================================================= */}
-      <div className="flex items-center gap-4">
-        <Link
-          href={`/dashboard/${guildId}/ticketing`}
-          className="p-2 rounded-xl bg-slate-900/60 border border-slate-800 hover:bg-slate-800 transition"
-        >
-          <ArrowLeft className="w-5 h-5 text-slate-300" />
-        </Link>
-
+      {/* ================================================ */}
+      {/* HEADER */}
+      {/* ================================================ */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Ticket Panels</h1>
-          <p className="text-slate-400">View and manage all ticket panels you’ve created.</p>
+          <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+            📂 Manage Ticket Panels
+          </h1>
+          <p className="text-slate-400">
+            View, edit and manage all created ticket panels.
+          </p>
         </div>
+
+        <Link
+          href={`/dashboard/${guildId}/ticketing/new`}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-all"
+        >
+          <PlusCircle className="w-5 h-5" />
+          New Ticket Panel
+        </Link>
       </div>
 
-      {/* =======================================================
-          CREATE NEW PANEL BUTTON
-      ======================================================= */}
-      <Link
-        href={`/dashboard/${guildId}/ticketing/new`}
-        className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-lg transition"
-      >
-        <PlusCircle className="w-5 h-5" />
-        Create New Panel
-      </Link>
-
-      {/* =======================================================
-          PANELS GRID
-      ======================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
+      {/* ================================================ */}
+      {/* GRID LIST */}
+      {/* ================================================ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {panels.length === 0 && (
-          <p className="text-slate-400">No ticket panels created yet.</p>
+          <div className="col-span-full text-center py-20 text-slate-400">
+            No ticket panels created yet.
+          </div>
         )}
 
         {panels.map((panel) => (
           <div
             key={panel.id}
-            className="bg-slate-900/60 border border-slate-800/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl space-y-4 hover:shadow-2xl hover:-translate-y-1 transition-all"
+            className="group relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-5 backdrop-blur-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex flex-col"
           >
-            {/* Color bar */}
-            <div
-              className="w-full h-2 rounded-xl mb-2"
-              style={{ backgroundColor: panel.color }}
-            />
+            {/* HEADER */}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <span className="text-2xl">{panel.buttonEmoji}</span>
+                {panel.name}
+              </h2>
 
-            {/* Panel name */}
-            <h2 className="text-xl font-semibold text-white">{panel.name}</h2>
-            <p className="text-slate-400 text-sm">{panel.description}</p>
-
-            {/* Buttons */}
-            <div className="pt-2 flex items-center gap-3">
               <Link
-                href={`/dashboard/${guildId}/ticketing/panel/${panel.id}`}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium flex items-center gap-2 transition"
+                href={`/dashboard/${guildId}/ticketing/new?edit=${panel.id}`}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition"
               >
-                <Edit className="w-4 h-4" />
-                Edit
+                <Pencil className="w-4 h-4 text-slate-300" />
               </Link>
+            </div>
+
+            {/* SUB INFO */}
+            <div className="text-slate-400 text-sm space-y-1 mb-4">
+              <p>
+                <span className="text-slate-500">Channel:</span>{" "}
+                #{panel.channel}
+              </p>
+              <p>
+                <span className="text-slate-500">Button:</span>{" "}
+                {panel.buttonEmoji} {panel.buttonText}
+              </p>
+              <p>
+                <span className="text-slate-500">Created:</span>{" "}
+                {panel.createdAt}
+              </p>
+            </div>
+
+            {/* BUTTONS */}
+            <div className="mt-auto pt-3 flex items-center justify-between">
+              <button
+                onClick={() => copyId(panel.id)}
+                className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
+              >
+                <Copy className="w-3 h-3" />
+                Copy ID
+              </button>
 
               <button
-                onClick={() =>
-                  setPanels((prev) => prev.filter((p) => p.id !== panel.id))
-                }
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium flex items-center gap-2 transition"
+                onClick={() => {
+                  // delete button placeholder
+                  setPanels((prev) =>
+                    prev.filter((p) => p.id !== panel.id)
+                  );
+                }}
+                className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-red-600/80 hover:bg-red-700 text-white transition"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3" />
                 Delete
               </button>
             </div>
+
+            {/* RIGHT ARROW HOVER */}
+            <ChevronRight className="absolute right-4 top-4 opacity-0 group-hover:opacity-80 text-slate-500 transition-all" />
           </div>
         ))}
-
       </div>
     </div>
   );
