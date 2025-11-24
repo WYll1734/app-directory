@@ -58,7 +58,7 @@ function EmojiPicker({ value, onChange }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 mt-1 w-48 rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-50">
+        <div className="absolute left-0 mt-1 w-48 rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-[9999]">
           <div className="border-b border-slate-800 p-2">
             <input
               value={query}
@@ -89,7 +89,7 @@ function EmojiPicker({ value, onChange }) {
 }
 
 // ---------------------------------------------------------
-// ChannelSelect – fixed floating dropdown (sits above all UI)
+// ChannelSelect – dropdown stays above all UI
 // ---------------------------------------------------------
 function ChannelSelect({
   channels,
@@ -101,16 +101,12 @@ function ChannelSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [menuRect, setMenuRect] = useState(null);
-
   const containerRef = useRef(null);
-  const menuRef = useRef(null);
 
   const selectedChannel = channels.find((c) => c.id === value) || null;
 
   const textChannels = channels.filter(
-    (c) =>
-      (c.type === 0 || c.type === 5 || c.type === 15) && c.name
+    (c) => (c.type === 0 || c.type === 5 || c.type === 15) && c.name
   );
 
   const filtered = textChannels.filter((c) =>
@@ -119,50 +115,22 @@ function ChannelSelect({
 
   const disabled = loading || !!error;
 
-  // Outside click – only while open to avoid weird instant-close behaviour
   useEffect(() => {
     if (!open) return;
-
     function handle(e) {
       if (
         containerRef.current &&
-        !containerRef.current.contains(e.target) &&
-        (!menuRef.current || !menuRef.current.contains(e.target))
+        !containerRef.current.contains(e.target)
       ) {
         setOpen(false);
       }
     }
-
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // Compute fixed menu rect so it floats above everything
-  const updateMenuRect = () => {
-    if (!containerRef.current) return;
-    const r = containerRef.current.getBoundingClientRect();
-    setMenuRect({
-      top: r.bottom + window.scrollY + 4,
-      left: r.left + window.scrollX,
-      width: r.width,
-    });
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    updateMenuRect();
-
-    const handler = () => updateMenuRect();
-    window.addEventListener("resize", handler);
-    window.addEventListener("scroll", handler, true);
-    return () => {
-      window.removeEventListener("resize", handler);
-      window.removeEventListener("scroll", handler, true);
-    };
-  }, [open]);
-
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className="relative w-full z-50" ref={containerRef}>
       <button
         type="button"
         disabled={disabled}
@@ -191,16 +159,8 @@ function ChannelSelect({
         <ChevronDown className="h-4 w-4 text-slate-400" />
       </button>
 
-      {open && !disabled && menuRect && (
-        <div
-          ref={menuRef}
-          className="fixed rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-[9999] overflow-hidden"
-          style={{
-            top: menuRect.top,
-            left: menuRect.left,
-            width: menuRect.width,
-          }}
-        >
+      {open && !disabled && (
+        <div className="absolute left-0 right-0 mt-1 rounded-xl border border-slate-800 bg-slate-950 shadow-xl shadow-black/60 z-[9999] overflow-hidden">
           {/* Search */}
           <div className="border-b border-slate-800 p-2">
             <input
@@ -251,7 +211,6 @@ export default function NewTicketPanelPage({ params }) {
 
   const runSave = () => {
     if (saving) return;
-
     setSaving(true);
     setSaved(false);
 
@@ -277,7 +236,6 @@ export default function NewTicketPanelPage({ params }) {
   useEffect(() => {
     if (!guildId) return;
 
-    // Load channels
     async function loadChannels() {
       try {
         setChannelsLoading(true);
@@ -303,7 +261,6 @@ export default function NewTicketPanelPage({ params }) {
       }
     }
 
-    // Load roles
     async function loadRoles() {
       try {
         setRolesLoading(true);
@@ -348,23 +305,18 @@ export default function NewTicketPanelPage({ params }) {
   const updateEmbed = (field, value) =>
     setEmbed((prev) => ({ ...prev, [field]: value }));
 
-  // Ticket button text + emoji
   const [buttonLabel, setButtonLabel] = useState("Create Ticket");
   const [buttonEmoji, setButtonEmoji] = useState("🎫");
 
   const previewButtonLabel = (buttonLabel || "Create Ticket").trim();
   const previewButtonEmoji = (buttonEmoji || "").trim();
 
-  // Which channels/roles we picked
   const [publishChannelId, setPublishChannelId] = useState("");
   const [panelChannelId, setPanelChannelId] = useState("");
   const [transcriptChannelId, setTranscriptChannelId] = useState("");
   const [ticketManagerRoleIds, setTicketManagerRoleIds] = useState([]);
 
-  // ticket transcript settings
   const [dmTranscript, setDmTranscript] = useState(false);
-
-  // General section collapse
   const [generalOpen, setGeneralOpen] = useState(true);
 
   // =======================================================
@@ -384,7 +336,6 @@ export default function NewTicketPanelPage({ params }) {
   const updateIntroEmbed = (field, value) =>
     setIntroEmbed((prev) => ({ ...prev, [field]: value }));
 
-  // Save button for intro section
   const [introSaving, setIntroSaving] = useState(false);
   const [introSaved, setIntroSaved] = useState(false);
 
@@ -402,7 +353,7 @@ export default function NewTicketPanelPage({ params }) {
   };
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="relative p-6 space-y-8 overflow-visible">
       {/* =======================================================
           BACK BUTTON + TITLE
       ======================================================= */}
@@ -425,7 +376,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           GENERAL SECTION (PUBLISH + TICKET MANAGER ROLES)
       ======================================================= */}
-      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-5 overflow-visible">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl space-y-5 overflow-visible">
         <button
           type="button"
           onClick={() => setGeneralOpen((v) => !v)}
@@ -471,16 +422,17 @@ export default function NewTicketPanelPage({ params }) {
                 <p className="text-xs text-red-400">{rolesError}</p>
               )}
 
-              <RoleMultiSelect
-                roles={roles}
-                value={ticketManagerRoleIds}
-                onChange={setTicketManagerRoleIds}
-              />
+              {/* Force the roles dropdown above other cards */}
+              <div className="relative z-[9999]">
+                <RoleMultiSelect
+                  roles={roles}
+                  value={ticketManagerRoleIds}
+                  onChange={setTicketManagerRoleIds}
+                />
+              </div>
 
               {rolesLoading && (
-                <p className="text-xs text-slate-500 mt-1">
-                  Loading roles…
-                </p>
+                <p className="text-xs text-slate-500 mt-1">Loading roles…</p>
               )}
             </div>
           </div>
@@ -490,7 +442,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           MAIN CARD: FORM + PREVIEW (2 COLUMN)
       ======================================================= */}
-      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-6 overflow-visible">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl space-y-6 overflow-visible">
         {/* Panel Name (full width) */}
         <div className="space-y-2">
           <label className="font-medium text-slate-200">Panel Name</label>
@@ -504,11 +456,9 @@ export default function NewTicketPanelPage({ params }) {
         </div>
 
         {/* Editor + Preview grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-          {/* ---------------------------------------------------
-              LEFT: EMBED + BUTTON CONFIG
-          --------------------------------------------------- */}
-          <div className="space-y-5">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start overflow-visible">
+          {/* LEFT: EMBED + BUTTON CONFIG */}
+          <div className="space-y-5 overflow-visible">
             {/* Embed Color */}
             <div className="space-y-2">
               <label className="font-medium text-slate-200">Embed Color</label>
@@ -582,13 +532,10 @@ export default function NewTicketPanelPage({ params }) {
             </div>
           </div>
 
-          {/* ---------------------------------------------------
-              RIGHT: LIVE DISCORD-LIKE PREVIEW
-          --------------------------------------------------- */}
-          <div className="space-y-3">
+          {/* RIGHT: LIVE DISCORD-LIKE PREVIEW */}
+          <div className="space-y-3 overflow-visible">
             <p className="text-sm font-medium text-slate-300">Preview</p>
 
-            {/* Fake Discord message container */}
             <div className="rounded-2xl bg-slate-950/70 border border-slate-800 p-4 shadow-inner">
               <div className="flex gap-3">
                 {/* Avatar */}
@@ -654,7 +601,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           TICKET INTRODUCTION MESSAGE (EDITABLE + EMBED)
       ======================================================= */}
-      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-4 overflow-visible">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl space-y-4 overflow-visible">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-200">
             Ticket introduction message
@@ -837,7 +784,7 @@ export default function NewTicketPanelPage({ params }) {
       {/* =======================================================
           TICKET TRANSCRIPT SECTION
       ======================================================= */}
-      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl backdrop-blur-xl space-y-5 overflow-visible">
+      <div className="relative bg-slate-900/60 border border-slate-800/70 rounded-2xl p-6 shadow-xl space-y-5 overflow-visible">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-200">
             Ticket transcript
