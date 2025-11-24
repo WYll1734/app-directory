@@ -89,7 +89,7 @@ function EmojiPicker({ value, onChange }) {
 }
 
 // ---------------------------------------------------------
-// ChannelSelect – minimal floating dropdown (option C)
+// ChannelSelect – fixed floating dropdown (sits above all UI)
 // ---------------------------------------------------------
 function ChannelSelect({
   channels,
@@ -119,8 +119,10 @@ function ChannelSelect({
 
   const disabled = loading || !!error;
 
-  // Close on outside click
+  // Outside click – only while open to avoid weird instant-close behaviour
   useEffect(() => {
+    if (!open) return;
+
     function handle(e) {
       if (
         containerRef.current &&
@@ -130,11 +132,12 @@ function ChannelSelect({
         setOpen(false);
       }
     }
+
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
-  }, []);
+  }, [open]);
 
-  // Compute fixed menu position so it floats above all cards
+  // Compute fixed menu rect so it floats above everything
   const updateMenuRect = () => {
     if (!containerRef.current) return;
     const r = containerRef.current.getBoundingClientRect();
@@ -163,7 +166,10 @@ function ChannelSelect({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((prev) => !prev);
+        }}
         className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-sm
           ${
             disabled
@@ -314,7 +320,7 @@ export default function NewTicketPanelPage({ params }) {
           throw new Error(json.error || "Failed to load roles");
         }
 
-        setRoles(json.roles || json.data || json);
+        setRoles(json.roles || []);
       } catch (e) {
         console.error("Roles load error:", e);
         setRolesError("Failed to load roles.");
