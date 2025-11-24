@@ -2,8 +2,37 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, ChevronDown } from "lucide-react";
 import RoleMultiSelect from "@/components/inputs/RoleMultiSelect";
+
+// TEMP MOCK PANELS (DELETE when DB added)
+const MOCK_PANELS = [
+  {
+    id: "abc123",
+    name: "Support Tickets",
+    embed: {
+      color: "#5865F2",
+      title: "Need help?",
+      description: "Click the button below to open a support ticket.",
+      footerText: "ServerMate Ticketing System",
+    },
+    buttonEmoji: "🎫",
+    buttonLabel: "Create Ticket",
+    publishChannelId: "1440490599244628062",
+    panelChannelId: "1440490827724886056",
+    transcriptChannelId: "1440490640239628519",
+    roles: ["1440541069258522727"],
+    introMessage:
+      "Your ticket has been created.\nPlease provide more info so staff can assist.",
+    introEmbed: {
+      color: "#5865F2",
+      title: "Information",
+      description: "Please include screenshots if relevant.",
+    },
+    dmTranscript: true,
+  },
+];
 
 // ---------------------------------------------------------
 // Emoji picker for ticket button
@@ -118,10 +147,7 @@ function ChannelSelect({
   useEffect(() => {
     if (!open) return;
     function handle(e) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
@@ -204,6 +230,13 @@ export default function NewTicketPanelPage({ params }) {
   const { guildId } = params;
 
   // =======================================================
+  // EDIT MODE (from ?edit=panelId)
+  // =======================================================
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const isEdit = Boolean(editId);
+
+  // =======================================================
   // SAVE BUTTON LOGIC (Save → Saving → Saved)
   // =======================================================
   const [saving, setSaving] = useState(false);
@@ -214,7 +247,7 @@ export default function NewTicketPanelPage({ params }) {
     setSaving(true);
     setSaved(false);
 
-    // later: call API here
+    // later: call API here for create/update
     setTimeout(() => {
       setSaving(false);
       setSaved(true);
@@ -352,6 +385,46 @@ export default function NewTicketPanelPage({ params }) {
     }, 800);
   };
 
+  // =======================================================
+  // EDIT MODE EFFECT – prefill from MOCK_PANELS
+  // =======================================================
+  useEffect(() => {
+    if (!isEdit) return;
+    const existing = MOCK_PANELS.find((p) => p.id === editId);
+    if (!existing) return;
+
+    // Panel name
+    setPanelName(existing.name);
+
+    // Embed
+    if (existing.embed) setEmbed(existing.embed);
+
+    // Button
+    if (existing.buttonEmoji) setButtonEmoji(existing.buttonEmoji);
+    if (existing.buttonLabel) setButtonLabel(existing.buttonLabel);
+
+    // Channels
+    if (existing.publishChannelId)
+      setPublishChannelId(existing.publishChannelId);
+    if (existing.panelChannelId) setPanelChannelId(existing.panelChannelId);
+    if (existing.transcriptChannelId)
+      setTranscriptChannelId(existing.transcriptChannelId);
+
+    // Roles
+    if (Array.isArray(existing.roles))
+      setTicketManagerRoleIds(existing.roles);
+
+    // Intro message
+    if (existing.introMessage) setIntroMessage(existing.introMessage);
+
+    // Intro embed
+    if (existing.introEmbed) setIntroEmbed(existing.introEmbed);
+
+    // DM transcript toggle
+    if (typeof existing.dmTranscript === "boolean")
+      setDmTranscript(existing.dmTranscript);
+  }, [isEdit, editId]);
+
   return (
     <div className="relative p-6 space-y-8 overflow-visible">
       {/* =======================================================
@@ -366,9 +439,13 @@ export default function NewTicketPanelPage({ params }) {
         </Link>
 
         <div>
-          <h1 className="text-3xl font-bold text-white">New Ticket Panel</h1>
+          <h1 className="text-3xl font-bold text-white">
+            {isEdit ? "Edit Ticket Panel" : "New Ticket Panel"}
+          </h1>
           <p className="text-slate-400">
-            Create your server&apos;s support ticket panel.
+            {isEdit
+              ? "Update your server's support ticket panel."
+              : "Create your server's support ticket panel."}
           </p>
         </div>
       </div>
@@ -411,7 +488,8 @@ export default function NewTicketPanelPage({ params }) {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <label className="font-medium text-slate-200 text-sm">
-                  Ticket Manager Roles<span className="text-red-500"> *</span>
+                  Ticket Manager Roles
+                  <span className="text-red-500"> *</span>
                 </label>
                 <span className="text-[11px] text-slate-500">
                   {ticketManagerRoleIds.length} / 10
@@ -850,7 +928,8 @@ export default function NewTicketPanelPage({ params }) {
           {saving && "Saving…"}
           {!saving && !saved && (
             <>
-              <Save className="w-5 h-5" /> Save Ticket Panel
+              <Save className="w-5 h-5" />
+              {isEdit ? "Save Changes" : "Save Ticket Panel"}
             </>
           )}
           {saved && "Saved!"}
