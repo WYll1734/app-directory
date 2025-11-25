@@ -2,8 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { ChevronLeft, Volume2 } from "lucide-react";
-import RoleDropdown from "@/components/inputs/RoleDropdown"; // uses your roles API
+import RoleDropdown from "@/components/inputs/RoleDropdown";
+import ChannelDropdown from "@/components/inputs/ChannelDropdown";
+
+const fetcher = (url) => fetch(url).then((r) => r.json());
 
 // ---------------------------------------------------
 // Reusable Toggle
@@ -87,6 +91,27 @@ export default function NewTempHubPage({ params }) {
   const { guildId } = params;
 
   // ================================
+  // FETCH ROLES & CHANNELS
+  // ================================
+  const {
+    data: rolesData,
+    error: rolesError,
+    isLoading: rolesLoading,
+  } = useSWR(`/api/discord/guilds/${guildId}/roles`, fetcher);
+
+  const {
+    data: channelsData,
+    error: channelsError,
+    isLoading: channelsLoading,
+  } = useSWR(`/api/discord/guilds/${guildId}/channels`, fetcher);
+
+  const roles = rolesData?.roles ?? [];
+  const channels = channelsData?.channels ?? [];
+
+  const voiceChannels = channels.filter((c) => c.type === 2);
+  const categoryChannels = channels.filter((c) => c.type === 4);
+
+  // ================================
   // HUB NAME
   // ================================
   const [nameTemplate, setNameTemplate] = useState(
@@ -110,18 +135,49 @@ export default function NewTempHubPage({ params }) {
   const [ownershipLock, setOwnershipLock] = useState(2); // minutes
 
   // ================================
+  // HUB LOCATION (CHANNEL + CATEGORY)
+// ================================
+  const [hubChannel, setHubChannel] = useState(null); // full channel object
+  const [hubCategory, setHubCategory] = useState(null); // full category object
+
+  // ================================
   // PERMISSIONS
   // ================================
   const [syncCategory, setSyncCategory] = useState(false);
   const [syncChannel, setSyncChannel] = useState(false);
   const [roleMode, setRoleMode] = useState("allow"); // "allow" | "deny"
 
-  // hooked into RoleDropdown → role IDs from your roles API
-  const [accessRole, setAccessRole] = useState(null);
-  const [ignoredRole, setIgnoredRole] = useState(null);
-  const [moderatorRole, setModeratorRole] = useState(null);
+  // These follow the btn shape RoleDropdown expects: { id, roleId }
+  const [accessRoleBtn, setAccessRoleBtn] = useState({
+    id: "access-role",
+    roleId: "",
+  });
+  const [ignoredRoleBtn, setIgnoredRoleBtn] = useState({
+    id: "ignored-role",
+    roleId: "",
+  });
+  const [moderatorRoleBtn, setModeratorRoleBtn] = useState({
+    id: "moderator-role",
+    roleId: "",
+  });
 
   const [alsoAccessByRoles, setAlsoAccessByRoles] = useState(false);
+
+  // RoleDropdown-style update handlers
+  const updateAccessRoleBtn = (id, field, value) => {
+    if (field !== "roleId") return;
+    setAccessRoleBtn((prev) => ({ ...prev, roleId: value }));
+  };
+
+  const updateIgnoredRoleBtn = (id, field, value) => {
+    if (field !== "roleId") return;
+    setIgnoredRoleBtn((prev) => ({ ...prev, roleId: value }));
+  };
+
+  const updateModeratorRoleBtn = (id, field, value) => {
+    if (field !== "roleId") return;
+    setModeratorRoleBtn((prev) => ({ ...prev, roleId: value }));
+  };
 
   // ================================
   // OWNER PERMISSIONS
@@ -160,12 +216,14 @@ export default function NewTempHubPage({ params }) {
     setBitrate(64);
     setKeepAlive(5);
     setOwnershipLock(2);
+    setHubChannel(null);
+    setHubCategory(null);
     setSyncCategory(false);
     setSyncChannel(false);
     setRoleMode("allow");
-    setAccessRole(null);
-    setIgnoredRole(null);
-    setModeratorRole(null);
+    setAccessRoleBtn({ id: "access-role", roleId: "" });
+    setIgnoredRoleBtn({ id: "ignored-role", roleId: "" });
+    setModeratorRoleBtn({ id: "moderator-role", roleId: "" });
     setAlsoAccessByRoles(false);
     setOwnerPerms({
       manageChannels: false,
@@ -191,13 +249,17 @@ export default function NewTempHubPage({ params }) {
         keepAlive,
         ownershipLock,
       },
+      hubLocation: {
+        hubChannelId: hubChannel?.id ?? null,
+        hubCategoryId: hubCategory?.id ?? null,
+      },
       permissions: {
         syncCategory,
         syncChannel,
         roleMode,
-        accessRole,
-        ignoredRole,
-        moderatorRole,
+        accessRoleId: accessRoleBtn.roleId || null,
+        ignoredRoleId: ignoredRoleBtn.roleId || null,
+        moderatorRoleId: moderatorRoleBtn.roleId || null,
         alsoAccessByRoles,
       },
       ownerPerms,
@@ -292,7 +354,58 @@ export default function NewTempHubPage({ params }) {
         </div>
       </section>
 
-      {/* SETTINGS – new sliders */}
+      {/* HUB LOCATION (CHANNEL + CATEGORY) */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
+        <header className="border-b border-slate-800 px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-100">
+            Hub Location <span className="ml-1">👑</span>
+          </h2>
+        </header>
+
+        <div className="px-5 py-5 space-y-6">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Hub voice channel
+            </p>
+            <ChannelDropdown
+              channels={voiceChannels}
+              value={hubChannel}
+              onChange={setHubChannel}
+            />
+            {channelsLoading && (
+              <p className="text-xs text-slate-500 mt-1">
+                Loading channels…
+              </p>
+            )}
+            {channelsError && (
+              <p className="text-xs text-red-400 mt-1">
+                Failed to load channels.
+              </p>
+            )}
+            <p className="text-xs text-slate-500 mt-1">
+              Members will join this channel to create their own temporary
+              voice channels.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Category for temporary channels
+            </p>
+            <ChannelDropdown
+              channels={categoryChannels}
+              value={hubCategory}
+              onChange={setHubCategory}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              New temporary channels for this hub will be created under this
+              category (optional).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SETTINGS – sliders */}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
@@ -348,7 +461,7 @@ export default function NewTempHubPage({ params }) {
         </div>
       </section>
 
-      {/* PERMISSIONS – now using RoleDropdown (API-backed) */}
+      {/* PERMISSIONS – RoleDropdown style */}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
@@ -416,16 +529,22 @@ export default function NewTempHubPage({ params }) {
               </label>
             </div>
 
-            {/* Access role – API-backed */}
+            {/* Access role – RoleDropdown style */}
             <div className="mt-3 space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Access role
               </p>
               <RoleDropdown
-                guildId={guildId}
-                value={accessRole}
-                onChange={setAccessRole}
+                btn={accessRoleBtn}
+                roles={roles}
+                loading={rolesLoading}
+                updateButton={updateAccessRoleBtn}
               />
+              {rolesError && (
+                <p className="text-xs text-red-400 mt-1">
+                  Failed to load roles.
+                </p>
+              )}
             </div>
 
             {/* Extra access toggle */}
@@ -446,20 +565,20 @@ export default function NewTempHubPage({ params }) {
             </div>
           </div>
 
-          {/* Ignored + Moderator roles – API-backed */}
+          {/* Ignored + Moderator roles – RoleDropdown style */}
           <div className="grid gap-5 md:grid-cols-2">
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Ignored roles
               </p>
               <RoleDropdown
-                guildId={guildId}
-                value={ignoredRole}
-                onChange={setIgnoredRole}
+                btn={ignoredRoleBtn}
+                roles={roles}
+                loading={rolesLoading}
+                updateButton={updateIgnoredRoleBtn}
               />
-              <p className="text-xs text-slate-500">
-                Users with this role will not be affected by /voice-*
-                commands.
+              <p className="text-xs text-slate-500 mt-1">
+                Users with this role will not be affected by /voice-* commands.
               </p>
             </div>
 
@@ -468,11 +587,12 @@ export default function NewTempHubPage({ params }) {
                 Moderator roles
               </p>
               <RoleDropdown
-                guildId={guildId}
-                value={moderatorRole}
-                onChange={setModeratorRole}
+                btn={moderatorRoleBtn}
+                roles={roles}
+                loading={rolesLoading}
+                updateButton={updateModeratorRoleBtn}
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 mt-1">
                 Users with this role can run /voice-* commands even if they
                 don&apos;t own the temporary channel.
               </p>
