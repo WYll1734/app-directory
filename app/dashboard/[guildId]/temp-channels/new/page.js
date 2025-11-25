@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Volume2 } from "lucide-react";
+import RoleDropdown from "@/components/inputs/RoleDropdown"; // uses your roles API
 
+// ---------------------------------------------------
+// Reusable Toggle
+// ---------------------------------------------------
 function Toggle({ checked, onChange }) {
   return (
     <button
@@ -22,10 +26,69 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+// ---------------------------------------------------
+// Reusable Slider Row – smooth + live value
+// ---------------------------------------------------
+function SliderRow({
+  label,
+  helper,
+  min,
+  max,
+  step = 1,
+  value,
+  onChange,
+  formatValue,
+}) {
+  const display = formatValue ? formatValue(value) : value;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-slate-100">{label}</h3>
+          {helper && (
+            <p className="mt-0.5 text-xs text-slate-500">{helper}</p>
+          )}
+        </div>
+        <div className="rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-emerald-400">
+          {display}
+        </div>
+      </div>
+
+      <div className="relative mt-1">
+        {/* subtle track background */}
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-800" />
+        {/* native slider on top */}
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="relative z-10 w-full cursor-pointer appearance-none bg-transparent focus:outline-none
+                     [&::-webkit-slider-thumb]:h-4
+                     [&::-webkit-slider-thumb]:w-4
+                     [&::-webkit-slider-thumb]:appearance-none
+                     [&::-webkit-slider-thumb]:rounded-full
+                     [&::-webkit-slider-thumb]:bg-emerald-500
+                     [&::-webkit-slider-thumb]:shadow
+                     [&::-webkit-slider-runnable-track]:h-1
+                     [&::-webkit-slider-runnable-track]:rounded-full
+                     [&::-webkit-slider-runnable-track]:bg-transparent
+                     accent-emerald-500"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function NewTempHubPage({ params }) {
   const { guildId } = params;
 
+  // ================================
   // HUB NAME
+  // ================================
   const [nameTemplate, setNameTemplate] = useState(
     "#{index} - {username}'s Channel"
   );
@@ -38,23 +101,31 @@ export default function NewTempHubPage({ params }) {
     [nameTemplate]
   );
 
+  // ================================
   // SETTINGS
-  const [userLimit, setUserLimit] = useState(0);
-  const [bitrate, setBitrate] = useState(64);
-  const [keepAlive, setKeepAlive] = useState(5);
-  const [ownershipLock, setOwnershipLock] = useState(2);
+  // ================================
+  const [userLimit, setUserLimit] = useState(0); // 0 = unlimited
+  const [bitrate, setBitrate] = useState(64); // kbps
+  const [keepAlive, setKeepAlive] = useState(5); // minutes
+  const [ownershipLock, setOwnershipLock] = useState(2); // minutes
 
+  // ================================
   // PERMISSIONS
+  // ================================
   const [syncCategory, setSyncCategory] = useState(false);
   const [syncChannel, setSyncChannel] = useState(false);
-  const [roleMode, setRoleMode] = useState("allow");
+  const [roleMode, setRoleMode] = useState("allow"); // "allow" | "deny"
 
-  const [accessRole, setAccessRole] = useState("");
+  // hooked into RoleDropdown → role IDs from your roles API
+  const [accessRole, setAccessRole] = useState(null);
+  const [ignoredRole, setIgnoredRole] = useState(null);
+  const [moderatorRole, setModeratorRole] = useState(null);
+
   const [alsoAccessByRoles, setAlsoAccessByRoles] = useState(false);
-  const [ignoredRole, setIgnoredRole] = useState("");
-  const [moderatorRole, setModeratorRole] = useState("");
 
+  // ================================
   // OWNER PERMISSIONS
+  // ================================
   const [ownerPerms, setOwnerPerms] = useState({
     manageChannels: false,
     managePermissions: false,
@@ -66,7 +137,9 @@ export default function NewTempHubPage({ params }) {
     setOwnerPerms((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // ================================
   // TEXT CHANNEL
+  // ================================
   const [textChannelSettings, setTextChannelSettings] = useState({
     enabled: false,
     restrictCommands: false,
@@ -78,6 +151,9 @@ export default function NewTempHubPage({ params }) {
     setTextChannelSettings((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // ================================
+  // ACTIONS
+  // ================================
   const handleDiscard = () => {
     setNameTemplate("#{index} - {username}'s Channel");
     setUserLimit(0);
@@ -87,19 +163,16 @@ export default function NewTempHubPage({ params }) {
     setSyncCategory(false);
     setSyncChannel(false);
     setRoleMode("allow");
-
-    setAccessRole("");
+    setAccessRole(null);
+    setIgnoredRole(null);
+    setModeratorRole(null);
     setAlsoAccessByRoles(false);
-    setIgnoredRole("");
-    setModeratorRole("");
-
     setOwnerPerms({
       manageChannels: false,
       managePermissions: false,
       prioritySpeaker: false,
       moveMembers: false,
     });
-
     setTextChannelSettings({
       enabled: false,
       restrictCommands: false,
@@ -112,24 +185,32 @@ export default function NewTempHubPage({ params }) {
     const payload = {
       guildId,
       nameTemplate,
-      userLimit,
-      bitrate,
-      keepAlive,
-      ownershipLock,
-      syncCategory,
-      syncChannel,
-      roleMode,
-      accessRole,
-      alsoAccessByRoles,
-      ignoredRole,
-      moderatorRole,
+      settings: {
+        userLimit,
+        bitrate,
+        keepAlive,
+        ownershipLock,
+      },
+      permissions: {
+        syncCategory,
+        syncChannel,
+        roleMode,
+        accessRole,
+        ignoredRole,
+        moderatorRole,
+        alsoAccessByRoles,
+      },
       ownerPerms,
       textChannelSettings,
     };
 
     console.log("Saving new hub:", payload);
+    // later: POST to /api/dashboard/[guildId]/temp-channels
   };
 
+  // ================================
+  // RENDER
+  // ================================
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* HEADER */}
@@ -142,9 +223,14 @@ export default function NewTempHubPage({ params }) {
             <ChevronLeft className="h-4 w-4" />
           </Link>
 
-          <h1 className="text-lg font-semibold text-slate-100">
-            New Hub
-          </h1>
+          <div>
+            <h1 className="text-lg font-semibold text-slate-100">
+              New Hub
+            </h1>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Configure how temporary voice channels behave for this hub.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -165,245 +251,230 @@ export default function NewTempHubPage({ params }) {
         </div>
       </div>
 
-      {/* HUB SECTION */}
+      {/* HUB NAME */}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            Hub 👑
+            Hub <span className="ml-1">👑</span>
           </h2>
         </header>
 
-        <div className="px-5 py-5">
+        <div className="px-5 py-5 space-y-6">
           <div>
-            <span className="text-xs font-semibold uppercase text-slate-400">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Temporary Channels Name
             </span>
             <input
-              className="mt-2 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+              className="mt-2 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none"
               value={nameTemplate}
               onChange={(e) => setNameTemplate(e.target.value)}
             />
             <p className="mt-1 text-xs text-slate-500">
-              Supports {"{index}"} and {"{username}"}
+              Supports{" "}
+              <span className="font-mono text-slate-300">{`{index}`}</span> and{" "}
+              <span className="font-mono text-slate-300">{`{username}`}</span>.
             </p>
           </div>
 
           {/* PREVIEW */}
-          <div className="mt-6">
-            <p className="text-xs font-semibold text-slate-400">Preview</p>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Preview
+            </p>
 
-            <div className="mt-2 flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-200">
+            <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-200">
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-800">
                 <Volume2 className="h-3 w-3" />
               </span>
-              {previewName}
+              <span>{previewName}</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SETTINGS */}
+      {/* SETTINGS – new sliders */}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            Settings 👑
+            Settings <span className="ml-1">👑</span>
           </h2>
         </header>
 
-        <div className="px-5 py-5 space-y-10">
-          {/* USER LIMIT */}
-          <div>
-            <h3 className="text-sm font-medium text-slate-100">User Limit</h3>
-            <p className="text-xs text-slate-500">
-              0 = unlimited
-            </p>
-            <input
-              type="range"
-              min={0}
-              max={99}
-              value={userLimit}
-              onChange={(e) => setUserLimit(Number(e.target.value))}
-              className="mt-3 w-full accent-emerald-500"
-            />
-          </div>
+        <div className="px-5 py-5 space-y-8">
+          <SliderRow
+            label="User Limit"
+            helper="0 = unlimited"
+            min={0}
+            max={99}
+            value={userLimit}
+            onChange={setUserLimit}
+            formatValue={(v) => (v === 0 ? "∞ (unlimited)" : v)}
+          />
 
-          {/* BITRATE */}
-          <div>
-            <h3 className="text-sm font-medium text-slate-100">Bitrate</h3>
-            <input
-              type="range"
-              min={8}
-              max={384}
-              step={8}
-              value={bitrate}
-              onChange={(e) => setBitrate(Number(e.target.value))}
-              className="mt-3 w-full accent-emerald-500"
-            />
-            <p className="text-xs text-slate-400 mt-1">
-              {bitrate} kbps
-            </p>
-          </div>
+          <SliderRow
+            label="Bitrate"
+            helper="Default bitrate for new temporary channels."
+            min={8}
+            max={384}
+            step={8}
+            value={bitrate}
+            onChange={setBitrate}
+            formatValue={(v) => `${v} kbps`}
+          />
 
-          {/* KEEP ALIVE */}
-          <div>
-            <h3 className="text-sm font-medium text-slate-100">Keep Alive</h3>
-            <input
-              type="range"
-              min={0}
-              max={10}
-              value={keepAlive}
-              onChange={(e) => setKeepAlive(Number(e.target.value))}
-              className="mt-3 w-full accent-emerald-500"
-            />
-          </div>
+          <SliderRow
+            label="Keep Alive"
+            helper="How long to keep the channel after everyone leaves."
+            min={0}
+            max={10}
+            value={keepAlive}
+            onChange={setKeepAlive}
+            formatValue={(v) =>
+              v === 0 ? "Delete immediately" : `${v} min`
+            }
+          />
 
-          {/* OWNERSHIP LOCK */}
-          <div>
-            <h3 className="text-sm font-medium text-slate-100">
-              Ownership Lock
-            </h3>
-            <input
-              type="range"
-              min={0}
-              max={10}
-              value={ownershipLock}
-              onChange={(e) => setOwnershipLock(Number(e.target.value))}
-              className="mt-3 w-full accent-emerald-500"
-            />
-          </div>
+          <SliderRow
+            label="Ownership Lock"
+            helper="How long before others can take ownership once the owner leaves."
+            min={0}
+            max={10}
+            value={ownershipLock}
+            onChange={setOwnershipLock}
+            formatValue={(v) =>
+              v === 0 ? "Immediately available" : `${v} min`
+            }
+          />
         </div>
       </section>
 
-      {/* PERMISSIONS */}
+      {/* PERMISSIONS – now using RoleDropdown (API-backed) */}
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            Permissions 👑
+            Permissions <span className="ml-1">👑</span>
           </h2>
         </header>
 
         <div className="px-5 py-5 space-y-7">
           {/* Sync toggles */}
-          <div className="flex justify-between items-start gap-4">
-            <div>
-              <p className="text-sm text-slate-200">
-                Sync with Hub category
-              </p>
-              <p className="text-xs text-slate-500">
-                Copies category permissions
-              </p>
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-100">
+                  Sync with Hub category
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Copy permissions from the category of the hub channel.
+                </p>
+              </div>
+              <Toggle
+                checked={syncCategory}
+                onChange={() => setSyncCategory((v) => !v)}
+              />
             </div>
-            <Toggle
-              checked={syncCategory}
-              onChange={() => setSyncCategory(!syncCategory)}
-            />
-          </div>
 
-          <div className="flex justify-between items-start gap-4">
-            <div>
-              <p className="text-sm text-slate-200">
-                Sync with Hub channel
-              </p>
-              <p className="text-xs text-slate-500">
-                Copies channel permissions
-              </p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-100">
+                  Sync with Hub channel
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Copy permissions directly from the hub voice channel.
+                </p>
+              </div>
+              <Toggle
+                checked={syncChannel}
+                onChange={() => setSyncChannel((v) => !v)}
+              />
             </div>
-            <Toggle
-              checked={syncChannel}
-              onChange={() => setSyncChannel(!syncChannel)}
-            />
           </div>
 
           {/* Role mode */}
-          <div>
+          <div className="space-y-3">
             <h3 className="text-sm font-medium text-slate-100">
               Role permissions
             </h3>
-
-            <div className="mt-2 space-y-2 text-sm text-slate-200">
+            <div className="space-y-2 text-sm text-slate-200">
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
+                  className="h-3 w-3"
                   checked={roleMode === "deny"}
                   onChange={() => setRoleMode("deny")}
                 />
-                Deny for all roles except
+                <span>Deny for all roles except</span>
               </label>
-
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
+                  className="h-3 w-3"
                   checked={roleMode === "allow"}
                   onChange={() => setRoleMode("allow")}
                 />
-                Allow for all roles except
+                <span>Allow for all roles except</span>
               </label>
             </div>
 
-            {/* Access role */}
-            <div className="mt-4">
-              <p className="text-xs font-semibold uppercase text-slate-400">
+            {/* Access role – API-backed */}
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Access role
               </p>
-              <button
-                className="mt-1 w-full flex items-center justify-between rounded-lg border bg-slate-900 border-slate-800 px-3 py-2 text-sm"
-                onClick={() => setAccessRole("Example Role")}
-              >
-                <span>{accessRole || "Select a role"}</span>
-              </button>
+              <RoleDropdown
+                guildId={guildId}
+                value={accessRole}
+                onChange={setAccessRole}
+              />
+            </div>
 
-              {/* Use for access */}
-              <div className="mt-4 flex justify-between items-start gap-4">
-                <div>
-                  <p className="text-sm text-slate-200">
-                    Also use these roles for access
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    (Applies additional access roles)
-                  </p>
-                </div>
-                <Toggle
-                  checked={alsoAccessByRoles}
-                  onChange={() =>
-                    setAlsoAccessByRoles(!alsoAccessByRoles)
-                  }
-                />
+            {/* Extra access toggle */}
+            <div className="mt-3 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-200">
+                  Also use these roles for temporary channel access
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Users with the access role can always join and create
+                  temporary channels for this hub.
+                </p>
               </div>
+              <Toggle
+                checked={alsoAccessByRoles}
+                onChange={() => setAlsoAccessByRoles((v) => !v)}
+              />
             </div>
           </div>
 
-          {/* Ignored + Moderator roles */}
+          {/* Ignored + Moderator roles – API-backed */}
           <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-400">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Ignored roles
               </p>
-              <button
-                className="mt-1 w-full flex items-center justify-between rounded-lg border bg-slate-900 border-slate-800 px-3 py-2 text-sm"
-                onClick={() => setIgnoredRole("Ignored Role")}
-              >
-                <span>{ignoredRole || "Select a role"}</span>
-              </button>
-
-              <p className="mt-1 text-xs text-slate-500">
-                These roles bypass /voice- commands
+              <RoleDropdown
+                guildId={guildId}
+                value={ignoredRole}
+                onChange={setIgnoredRole}
+              />
+              <p className="text-xs text-slate-500">
+                Users with this role will not be affected by /voice-*
+                commands.
               </p>
             </div>
 
-            <div>
-              <p className="text-xs font-semibold uppercase text-slate-400">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Moderator roles
               </p>
-
-              <button
-                className="mt-1 w-full flex items-center justify-between rounded-lg border bg-slate-900 border-slate-800 px-3 py-2 text-sm"
-                onClick={() => setModeratorRole("Moderator Role")}
-              >
-                <span>{moderatorRole || "Select a role"}</span>
-              </button>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Moderators can run /voice- commands
+              <RoleDropdown
+                guildId={guildId}
+                value={moderatorRole}
+                onChange={setModeratorRole}
+              />
+              <p className="text-xs text-slate-500">
+                Users with this role can run /voice-* commands even if they
+                don&apos;t own the temporary channel.
               </p>
             </div>
           </div>
@@ -414,7 +485,7 @@ export default function NewTempHubPage({ params }) {
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            Owner Permissions 👑
+            Owner Permissions <span className="ml-1">👑</span>
           </h2>
         </header>
 
@@ -423,22 +494,22 @@ export default function NewTempHubPage({ params }) {
             {
               key: "manageChannels",
               title: "Manage Channels",
-              desc: "Rename temporary channels & adjust limits.",
+              desc: "Allow the owner to rename and change user limits of their temporary channel.",
             },
             {
               key: "managePermissions",
               title: "Manage Permissions",
-              desc: "Edit advanced channel permissions.",
+              desc: "Allow the owner to edit advanced permissions on the temporary channel.",
             },
             {
               key: "prioritySpeaker",
               title: "Priority Speaker",
-              desc: "Owner becomes the only priority speaker.",
+              desc: "Make the owner the only priority speaker of the temporary channel.",
             },
             {
               key: "moveMembers",
               title: "Move Members",
-              desc: "Owner can disconnect other users.",
+              desc: "Allow the owner to disconnect other users from the temporary channel.",
             },
           ].map((item) => (
             <div
@@ -467,7 +538,7 @@ export default function NewTempHubPage({ params }) {
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-sm">
         <header className="border-b border-slate-800 px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-100">
-            Text Channel 👑
+            Text Channel <span className="ml-1">👑</span>
           </h2>
         </header>
 
@@ -476,22 +547,22 @@ export default function NewTempHubPage({ params }) {
             {
               key: "enabled",
               title: "Text Channel",
-              desc: "Create a temporary text channel.",
+              desc: "Create a temporary text channel linked to the temporary voice channel.",
             },
             {
               key: "restrictCommands",
               title: "Restrict commands",
-              desc: "Commands only usable inside temp text channel.",
+              desc: "Limit /voice-* commands to the linked temporary text channel only.",
             },
             {
               key: "pinUsages",
               title: "Pin usages",
-              desc: "Pins embed with /voice- command usage.",
+              desc: "Pin an embed explaining all /voice-* commands in the linked text channel.",
             },
             {
               key: "restrictTextChannel",
               title: "Restrict text channel",
-              desc: "Only connected users can read & send messages.",
+              desc: "Only moderators, bot masters, and connected users can read/send messages there.",
             },
           ].map((item) => (
             <div
