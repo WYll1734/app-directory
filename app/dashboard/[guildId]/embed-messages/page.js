@@ -102,7 +102,7 @@ export default function EmbedMessagesPage({ params }) {
 
       {/* New embed button */}
       <Link
-        href={`/dashboard/${guildId}/embeds/new`}
+        href={`/dashboard/${guildId}/embed-messages/new`}>
         className="group flex items-center justify-between rounded-xl border border-slate-700/70 bg-slate-900/60 px-5 py-4 text-sm hover:border-slate-500 hover:bg-slate-900 transition"
       >
         <div className="flex items-center gap-3">
