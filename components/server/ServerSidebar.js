@@ -18,20 +18,19 @@ const sidebarSections = [
     ],
   },
 
-  {
-    title: "Utilities",
-    items: [
-      // UPDATED → Ticketing now uses correct route
-      { label: "Ticketing", icon: "🎫", id: "ticketing" },
+{
+  title: "Utilities",
+  items: [
+    { label: "Ticketing", icon: "🎫", id: "ticketing" },
 
-      { label: "Temp Channels", icon: "📢", id: "temp-channels" },
-      { label: "Embed Messages", icon: "📝", id: "embed-messages" }
-      { label: "Polls", icon: "📊", id: "polls" },
-      { label: "Reminders", icon: "⏰", id: "reminders" },
-      { label: "Statistics Channels", icon: "📈", id: "statistics" },
-      { label: "Giveaways", icon: "🎉", id: "giveaways" },
-    ],
-  },
+    { label: "Temp Channels", icon: "📢", id: "temp-channels" },
+    { label: "Embed Messages", icon: "📝", id: "embed-messages" },
+    { label: "Polls", icon: "📊", id: "polls" },
+    { label: "Reminders", icon: "⏰", id: "reminders" },
+    { label: "Statistics Channels", icon: "📈", id: "statistics" },
+    { label: "Giveaways", icon: "🎉", id: "giveaways" },
+  ],
+},
 
   {
     title: "Server Management",
