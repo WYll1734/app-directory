@@ -101,10 +101,10 @@ export default function EmbedMessagesPage({ params }) {
       </div>
 
       {/* New embed button */}
-      <Link
-        href={`/dashboard/${guildId}/embed-messages/new`}>
-        className="group flex items-center justify-between rounded-xl border border-slate-700/70 bg-slate-900/60 px-5 py-4 text-sm hover:border-slate-500 hover:bg-slate-900 transition"
-      >
+<Link
+  href={`/dashboard/${guildId}/embed-messages/new`}
+  className="group flex items-center justify-between rounded-xl border border-slate-700/70 bg-slate-900/60 px-5 py-4 text-sm hover:border-slate-500 hover:bg-slate-900 transition"
+>
         <div className="flex items-center gap-3">
           <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80">
             <Plus className="h-4 w-4 text-slate-300" />
