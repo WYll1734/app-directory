@@ -25,7 +25,7 @@ const sidebarSections = [
       { label: "Ticketing", icon: "🎫", id: "ticketing" },
 
       { label: "Temp Channels", icon: "📢", id: "temp-channels" },
-      { label: "Embed Messages", icon: "📝", id: "embed-messages" },
+      { label: "Embed Messages", icon: "📝", id: "embeded-messages" },
       { label: "Polls", icon: "📊", id: "polls" },
       { label: "Reminders", icon: "⏰", id: "reminders" },
       { label: "Statistics Channels", icon: "📈", id: "statistics" },
