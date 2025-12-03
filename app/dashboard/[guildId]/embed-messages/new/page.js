@@ -1,237 +1,110 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChevronLeft } from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
-// ---------------------------------------------------------------
-// Simple Discord-style embed preview
-// ---------------------------------------------------------------
-function EmbedPreview({ embed }) {
-  return (
-    <div className="bg-[#2b2d31] border border-[#1e1f22] rounded-lg p-4 mt-6">
-      {/* Author */}
-      {embed.author && (
-        <div className="flex items-center gap-2 mb-2">
-          {embed.authorIcon && (
-            <img
-              src={embed.authorIcon}
-              className="w-5 h-5 rounded-full"
-              alt=""
-            />
-          )}
-          <p className="text-sm text-white">{embed.author}</p>
-        </div>
-      )}
-
-      {/* Title */}
-      {embed.title && (
-        <p className="text-lg font-semibold text-white mb-1">
-          {embed.title}
-        </p>
-      )}
-
-      {/* Description */}
-      {embed.description && (
-        <p className="text-sm text-gray-300 whitespace-pre-line mb-2">
-          {embed.description}
-        </p>
-      )}
-
-      {/* Thumbnail */}
-      {embed.thumb && (
-        <img
-          src={embed.thumb}
-          className="w-20 h-20 object-cover rounded absolute top-4 right-4"
-          alt=""
-        />
-      )}
-
-      {/* Image */}
-      {embed.image && (
-        <img
-          src={embed.image}
-          className="w-full rounded-lg mt-4"
-          alt=""
-        />
-      )}
-
-      {/* Footer */}
-      {embed.footer && (
-        <p className="text-xs text-gray-400 mt-4 border-t border-[#1e1f22] pt-2">
-          {embed.footer}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------
-// MAIN PAGE
-// ---------------------------------------------------------------
 export default function NewEmbedPage({ params }) {
   const { guildId } = params;
 
-  const [channels, setChannels] = useState([]);
-  const [loadingChannels, setLoadingChannels] = useState(true);
+  // ===============================
+  // EMBED STATE
+  // ===============================
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [footer, setFooter] = useState("");
+  const [color, setColor] = useState("#5865F2");
 
-  const [embed, setEmbed] = useState({
-    title: "",
-    description: "",
-    author: "",
-    authorIcon: "",
-    thumb: "",
-    image: "",
-    footer: "",
-  });
-
-  // Fetch channels from your existing API
-  useEffect(() => {
-    async function loadChannels() {
-      try {
-        const res = await fetch(`/api/discord/guilds/${guildId}/channels`);
-        const data = await res.json();
-        setChannels(data.channels || []);
-      } catch (err) {
-        console.error("Failed to load channels:", err);
-      } finally {
-        setLoadingChannels(false);
-      }
-    }
-    loadChannels();
-  }, [guildId]);
-
+  // ===============================
+  // UI
+  // ===============================
   return (
-    <div className="p-6">
+    <div className="p-6 flex flex-col gap-6">
 
-      {/* ----------------------------------------------------- */}
       {/* BACK BUTTON */}
-      {/* ----------------------------------------------------- */}
       <Link
         href={`/dashboard/${guildId}/embed-builder`}
-        className="flex items-center gap-2 text-gray-300 hover:text-white transition mb-6"
+        className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition"
       >
-        <ArrowLeft size={18} />
-        Back
+        <ChevronLeft size={18} />
+        Back to embeds
       </Link>
 
-      <h1 className="text-2xl font-semibold text-white mb-6">New Embed</h1>
+      <h1 className="text-2xl font-semibold text-white">New Embed Message</h1>
 
-      {/* ----------------------------------------------------- */}
-      {/* EMBED SETTINGS */}
-      {/* ----------------------------------------------------- */}
-      <div className="bg-[#1a1b1e] border border-[#2b2d31] rounded-lg p-5 mb-6">
-        <h2 className="text-lg font-bold text-white mb-4">Embed Settings</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Channel */}
-        <label className="text-sm text-gray-400">Channel</label>
-        <select
-          className="w-full mt-1 p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-        >
-          {loadingChannels ? (
-            <option>Loading channels…</option>
-          ) : (
-            <>
-              <option value="">Select a channel</option>
-              {channels.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  #{ch.name}
-                </option>
-              ))}
-            </>
-          )}
-        </select>
+        {/* =================== PREVIEW =================== */}
+        <div className="bg-[#111319] p-4 rounded-xl border border-white/5">
+          <h2 className="text-gray-300 mb-3">Embed Preview</h2>
 
-        {/* Embed name */}
-        <label className="text-sm text-gray-400 mt-4 block">Embed name</label>
-        <input
-          type="text"
-          placeholder="New Embed"
-          className="w-full mt-1 p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-        />
-      </div>
+          <div
+            className="rounded-lg p-4"
+            style={{ borderLeft: `4px solid ${color}` }}
+          >
+            {title && (
+              <p className="text-lg font-semibold text-white">{title}</p>
+            )}
 
-      {/* ----------------------------------------------------- */}
-      {/* EMBED BUILDER FORM */}
-      {/* ----------------------------------------------------- */}
-      <div className="bg-[#1a1b1e] border border-[#2b2d31] rounded-lg p-5">
-        <h2 className="text-lg font-bold text-white mb-4">
-          Embed Message Builder
-        </h2>
+            {description && (
+              <p className="text-gray-300 whitespace-pre-wrap mt-2">
+                {description}
+              </p>
+            )}
 
-        {/* Message fields */}
-        <div className="space-y-3">
-          <input
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Title"
-            value={embed.title}
-            onChange={(e) => setEmbed({ ...embed, title: e.target.value })}
-          />
-
-          <textarea
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Description"
-            rows={4}
-            value={embed.description}
-            onChange={(e) =>
-              setEmbed({ ...embed, description: e.target.value })
-            }
-          />
-
-          <input
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Author"
-            value={embed.author}
-            onChange={(e) => setEmbed({ ...embed, author: e.target.value })}
-          />
-
-          <input
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Author Icon URL"
-            value={embed.authorIcon}
-            onChange={(e) =>
-              setEmbed({ ...embed, authorIcon: e.target.value })
-            }
-          />
-
-          <input
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Thumbnail URL"
-            value={embed.thumb}
-            onChange={(e) => setEmbed({ ...embed, thumb: e.target.value })}
-          />
-
-          <input
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Main Image URL"
-            value={embed.image}
-            onChange={(e) => setEmbed({ ...embed, image: e.target.value })}
-          />
-
-          <input
-            className="w-full p-2 bg-[#2b2d31] text-gray-200 rounded-lg"
-            placeholder="Footer text"
-            value={embed.footer}
-            onChange={(e) => setEmbed({ ...embed, footer: e.target.value })}
-          />
+            {footer && (
+              <p className="text-gray-500 text-sm mt-4">{footer}</p>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ----------------------------------------------------- */}
-      {/* LIVE PREVIEW */}
-      {/* ----------------------------------------------------- */}
-      <EmbedPreview embed={embed} />
+        {/* =================== SETTINGS =================== */}
+        <div className="bg-[#111319] p-4 rounded-xl border border-white/5">
+          <h2 className="text-gray-300 mb-3">Settings</h2>
 
-      {/* ----------------------------------------------------- */}
-      {/* SAVE + PUBLISH BUTTONS */}
-      {/* ----------------------------------------------------- */}
-      <div className="flex justify-end gap-3 mt-6">
-        <button className="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600">
-          Save
-        </button>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          Publish
-        </button>
+          <div className="flex flex-col gap-4">
+
+            {/* TITLE */}
+            <input
+              className="bg-[#0d0f16] p-3 rounded-lg border border-white/5 text-white"
+              placeholder="Embed title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+
+            {/* DESCRIPTION */}
+            <textarea
+              className="bg-[#0d0f16] p-3 rounded-lg border border-white/5 text-white h-40"
+              placeholder="Embed description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+
+            {/* FOOTER */}
+            <input
+              className="bg-[#0d0f16] p-3 rounded-lg border border-white/5 text-white"
+              placeholder="Footer text"
+              value={footer}
+              onChange={(e) => setFooter(e.target.value)}
+            />
+
+            {/* COLOR PICKER */}
+            <div>
+              <label className="text-sm text-gray-400">Color</label>
+              <input
+                type="color"
+                className="w-full h-10 p-1 rounded-lg bg-[#0d0f16] border border-white/5"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+              />
+            </div>
+
+            {/* CREATE BUTTON */}
+            <button className="bg-indigo-600 hover:bg-indigo-700 transition text-white p-3 rounded-lg">
+              Create embed
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
