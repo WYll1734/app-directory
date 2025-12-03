@@ -1,18 +1,61 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 
+// ---------------------------------------------------------
+// LIVE PREVIEW COMPONENT
+// ---------------------------------------------------------
+function EmbedPreview({ embed }) {
+  return (
+    <div className="p-4 bg-[#1a1d29] rounded-xl border border-white/5 text-white w-full">
+      {/* Color bar */}
+      <div className="w-full h-1 rounded-md" style={{ background: embed.color }} />
+
+      <div className="mt-3">
+        {embed.title && <p className="text-lg font-semibold">{embed.title}</p>}
+        {embed.description && (
+          <p className="text-sm text-white/70 whitespace-pre-line mt-1">
+            {embed.description}
+          </p>
+        )}
+      </div>
+
+      {embed.footer && (
+        <div className="mt-4">
+          <p className="text-xs text-white/40">{embed.footer}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------
+// MAIN PAGE
+// ---------------------------------------------------------
 export default function NewEmbedPage({ params }) {
   const { guildId } = params;
 
-  // -------------------------
-  // CHANNEL FETCH
-  // -------------------------
   const [channels, setChannels] = useState([]);
-  const [loadingChannels, setLoadingChannels] = useState(true);
 
+  // -----------------------------
+  // EMBED STATE
+  // -----------------------------
+  const [embed, setEmbed] = useState({
+    title: "",
+    description: "",
+    footer: "",
+    color: "#5865F2",
+    buttonLabel: "Open Ticket",
+    buttonStyle: "Primary",
+    linkButtons: [],
+    channelId: "",
+  });
+
+  // -----------------------------
+  // Fetch channels from your existing API
+  // -----------------------------
   useEffect(() => {
     async function fetchChannels() {
       try {
@@ -20,169 +63,170 @@ export default function NewEmbedPage({ params }) {
         const data = await res.json();
         setChannels(data.channels || []);
       } catch (err) {
-        console.error("Channel fetch error:", err);
+        console.error("Failed to load channels:", err);
       }
-      setLoadingChannels(false);
     }
+
     fetchChannels();
   }, [guildId]);
 
-  // -------------------------
-  // FORM STATE
-  // -------------------------
-  const [embed, setEmbed] = useState({
-    title: "",
-    description: "",
-    footer: "",
-    color: "#5865F2",
-  });
+  // -----------------------------
+  // LINK BUTTON HANDLER
+  // -----------------------------
+  const addLinkButton = () => {
+    setEmbed((prev) => ({
+      ...prev,
+      linkButtons: [...prev.linkButtons, { label: "", url: "" }],
+    }));
+  };
 
-  const [button, setButton] = useState({
-    label: "",
-    url: "",
-  });
-
-  const update = (field, value) =>
-    setEmbed((prev) => ({ ...prev, [field]: value }));
-
-  const updateButton = (field, value) =>
-    setButton((prev) => ({ ...prev, [field]: value }));
+  const updateLinkButton = (i, field, value) => {
+    const updated = [...embed.linkButtons];
+    updated[i][field] = value;
+    setEmbed((prev) => ({ ...prev, linkButtons: updated }));
+  };
 
   return (
-    <div className="p-6">
+    <div className="p-8">
 
-      {/* ------------------------- */}
       {/* BACK BUTTON */}
-      {/* ------------------------- */}
       <Link
-        href={`/dashboard/${guildId}/embed-builder`}
-        className="flex items-center gap-2 text-gray-300 hover:text-white transition mb-4"
+        href={`/dashboard/${guildId}/embeds`}
+        className="flex items-center gap-2 text-white/60 hover:text-white transition mb-6"
       >
-        <ArrowLeft size={18} /> Back
+        <ChevronLeft size={20} /> Back
       </Link>
 
-      <h1 className="text-2xl font-semibold mb-6">New Embed Message</h1>
+      <h1 className="text-xl font-semibold text-white mb-6">New Embed Message</h1>
 
-      {/* =============================== */}
-      {/* TWO-COLUMN LAYOUT */}
-      {/* =============================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* GRID LAYOUT */}
+      <div className="grid grid-cols-2 gap-8">
 
-        {/* LEFT — LIVE EMBED PREVIEW */}
-        <div className="bg-slate-900/40 rounded-xl p-5 border border-slate-800">
+        {/* LEFT SIDE – LIVE PREVIEW */}
+        <div className="space-y-4">
 
-          <h2 className="text-lg font-medium mb-3">Embed Preview</h2>
+          <h2 className="text-white/70 text-sm">Embed Preview</h2>
 
-          <div
-            className="p-4 rounded-lg"
-            style={{ borderLeft: `4px solid ${embed.color}` }}
-          >
-            {embed.title && (
-              <p className="text-lg font-semibold text-white">{embed.title}</p>
-            )}
+          <EmbedPreview embed={embed} />
 
-            {embed.description && (
-              <p className="text-gray-300 mt-1 whitespace-pre-line">
-                {embed.description}
-              </p>
-            )}
-
-            {embed.footer && (
-              <p className="text-gray-500 text-sm mt-3">{embed.footer}</p>
-            )}
-
-            {button.label && button.url && (
-              <a
-                href={button.url}
-                target="_blank"
-                className="inline-block mt-4 px-4 py-2 bg-indigo-600 rounded-lg text-white text-sm hover:bg-indigo-700 transition"
-              >
-                {button.label}
-              </a>
-            )}
-          </div>
         </div>
 
-        {/* RIGHT — SETTINGS */}
-        <div className="bg-slate-900/40 rounded-xl p-5 border border-slate-800">
-          <h2 className="text-lg font-medium mb-3">Settings</h2>
+        {/* RIGHT SIDE – SETTINGS */}
+        <div className="space-y-6">
 
-          {/* Channel dropdown */}
-          <label className="block text-sm mb-1">Target channel</label>
-          <select className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 mb-4 text-white">
-            {loadingChannels ? (
-              <option>Loading…</option>
-            ) : (
-              <>
-                <option value="">Select a channel</option>
-                {channels.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    #{ch.name}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
+          {/* CHANNEL DROPDOWN */}
+          <div className="flex flex-col gap-2">
+            <label className="text-white/60 text-sm">Target Channel</label>
+            <select
+              value={embed.channelId}
+              onChange={(e) =>
+                setEmbed((prev) => ({ ...prev, channelId: e.target.value }))
+              }
+              className="bg-[#11131b] border border-white/5 rounded-lg px-3 py-2 text-white"
+            >
+              <option value="">Select a channel…</option>
+              {channels.map((ch) => (
+                <option key={ch.id} value={ch.id}>
+                  #{ch.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Embed title */}
-          <label className="block text-sm mb-1">Embed title</label>
-          <input
-            className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 mb-4 text-white"
-            placeholder="Enter title…"
-            value={embed.title}
-            onChange={(e) => update("title", e.target.value)}
-          />
+          {/* TITLE */}
+          <div className="flex flex-col gap-2">
+            <label className="text-white/60 text-sm">Title</label>
+            <input
+              type="text"
+              value={embed.title}
+              onChange={(e) =>
+                setEmbed((prev) => ({ ...prev, title: e.target.value }))
+              }
+              className="bg-[#11131b] border border-white/5 rounded-lg px-3 py-2 text-white"
+              placeholder="Embed title…"
+            />
+          </div>
 
-          {/* Description */}
-          <label className="block text-sm mb-1">Embed description</label>
-          <textarea
-            className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 mb-4 text-white h-32"
-            placeholder="Write description…"
-            value={embed.description}
-            onChange={(e) => update("description", e.target.value)}
-          />
+          {/* DESCRIPTION */}
+          <div className="flex flex-col gap-2">
+            <label className="text-white/60 text-sm">Description</label>
+            <textarea
+              value={embed.description}
+              onChange={(e) =>
+                setEmbed((prev) => ({ ...prev, description: e.target.value }))
+              }
+              className="bg-[#11131b] border border-white/5 rounded-lg px-3 py-2 text-white"
+              rows={4}
+              placeholder="Embed description…"
+            />
+          </div>
 
-          {/* Footer */}
-          <label className="block text-sm mb-1">Footer text</label>
-          <input
-            className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 mb-4 text-white"
-            placeholder="Footer text…"
-            value={embed.footer}
-            onChange={(e) => update("footer", e.target.value)}
-          />
+          {/* FOOTER */}
+          <div className="flex flex-col gap-2">
+            <label className="text-white/60 text-sm">Footer</label>
+            <input
+              type="text"
+              value={embed.footer}
+              onChange={(e) =>
+                setEmbed((prev) => ({ ...prev, footer: e.target.value }))
+              }
+              className="bg-[#11131b] border border-white/5 rounded-lg px-3 py-2 text-white"
+              placeholder="Footer text…"
+            />
+          </div>
 
-          {/* Color */}
-          <label className="block text-sm mb-1">Embed color (hex)</label>
-          <input
-            type="color"
-            className="w-full h-10 rounded-lg mb-6 cursor-pointer"
-            value={embed.color}
-            onChange={(e) => update("color", e.target.value)}
-          />
+          {/* EMBED COLOR */}
+          <div className="flex flex-col gap-2">
+            <label className="text-white/60 text-sm">Embed Color</label>
+            <input
+              type="color"
+              value={embed.color}
+              onChange={(e) =>
+                setEmbed((prev) => ({ ...prev, color: e.target.value }))
+              }
+              className="h-10 w-20 rounded border border-white/10"
+            />
+          </div>
 
-          {/* ------------------------- */}
-          {/* LINK BUTTON (MEE6 STYLE) */}
-          {/* ------------------------- */}
-          <h3 className="text-md font-medium mb-2">Link Button</h3>
+          {/* LINK BUTTONS */}
+          <div className="flex flex-col gap-2">
+            <label className="text-white/60 text-sm">Link Buttons</label>
 
-          <input
-            className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 mb-3 text-white"
-            placeholder="Button label (e.g. Open Ticket)"
-            value={button.label}
-            onChange={(e) => updateButton("label", e.target.value)}
-          />
+            {embed.linkButtons.map((btn, i) => (
+              <div key={i} className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Button label"
+                  value={btn.label}
+                  className="bg-[#11131b] border border-white/5 rounded-lg px-3 py-2 text-white"
+                  onChange={(e) => updateLinkButton(i, "label", e.target.value)}
+                />
 
-          <input
-            className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700 mb-4 text-white"
-            placeholder="Button URL (https://)"
-            value={button.url}
-            onChange={(e) => updateButton("url", e.target.value)}
-          />
+                <input
+                  type="text"
+                  placeholder="URL"
+                  value={btn.url}
+                  className="bg-[#11131b] border border-white/5 rounded-lg px-3 py-2 text-white"
+                  onChange={(e) => updateLinkButton(i, "url", e.target.value)}
+                />
+              </div>
+            ))}
 
-          {/* SUBMIT BUTTON */}
-          <button className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white mt-4 w-full">
-            Create embed
+            <button
+              onClick={addLinkButton}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm w-fit mt-1"
+            >
+              + Add Link Button
+            </button>
+          </div>
+
+          {/* CREATE EMBED BUTTON */}
+          <button
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-medium"
+          >
+            Create Embed
           </button>
+
         </div>
       </div>
     </div>
